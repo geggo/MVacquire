@@ -1,0 +1,6 @@
+build/
+old/
+matrix-vision/
+generate/_mvDeviceManager.pxd
+generate/_mvDriverBaseEnums.pxd
+generate/_mvPropHandlingDatatypes.pxd
