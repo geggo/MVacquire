@@ -3,6 +3,8 @@ from _mvDeviceManager cimport *
 from libc.stdlib cimport malloc, free
 #from cpython.string cimport PyString_FromStringAndSize
 from cpython.ref cimport Py_INCREF, Py_DECREF
+import cython
+#cimport cython
 
 cdef int visibility_level = cvExpert
 
@@ -164,52 +166,29 @@ cdef class Component:
             result = OBJ_CheckHandle(self.obj, hcmFull)
             return (result == PROPHANDLING_NO_ERROR)
 
-    property name:
-        def __get__(self):
-            cdef char buf[256] #FIXME
-            cdef bytes value
-            obj_errcheck(OBJ_GetName(self.obj, buf, sizeof(buf)))
-            value = buf
-            return value
-
-    cdef object get_string(self, TOBJ_StringQuery sq, int index = 0):
+    def get_string(self, TOBJ_StringQuery sq, int index = 0):
         cdef char* res
-        OBJ_GetSWithInplaceConstruction(
+        obj_errcheck(OBJ_GetSWithInplaceConstruction(
             self.obj,
             sq,
             &res,
             StringConstructionFunction,
-            index, 0)
+            0, index))
         cdef object result = <object><void*>res
         Py_DECREF(result)
         return result
-        
-        
+
+    property name:
+        def __get__(self):
+            return self.get_string(sqObjName)
+
     property display_name:
         def __get__(self):
-            #cdef char buf[256] #FIXME
-            #obj_errcheck(OBJ_GetDisplayName(self.obj, buf, sizeof(buf)))
-            #return buf
-            
-            # cdef char* res
-            # OBJ_GetSWithInplaceConstruction(
-            #     self.obj,
-            #     #sqObjDisplayName,
-            #     sqListContentDescriptor,
-            #     &res,
-            #     StringConstructionFunction,
-            #     0, 0)
-            # cdef object result = <object><void*>res
-            # Py_DECREF(result)
-            
-            #return result
             return self.get_string(sqObjDisplayName)
 
     property doc_string:
         def __get__(self):
-            cdef char buf[8000] #FIXME
-            obj_errcheck(OBJ_GetDocString(self.obj, buf, sizeof(buf)))
-            return buf
+            return self.get_string(sqObjDocString)
 
     property isdefault:
         def __get__(self):
@@ -239,12 +218,11 @@ cdef class Component:
             obj_errcheck(OBJ_GetChangedCounterAttr(self.obj, &counter))
             return counter
 
-
     #def __str__(self):
     #    return "Component '%s'"%self.name
 
-    def __repr__(self):
-        return "%s '%s'"%(type(self), self.name)
+    #def __repr__(self):
+    #    return "%s '%s'"%(type(self), self.name)
 
 cdef class ListIter:
     cdef HOBJ obj
@@ -297,9 +275,7 @@ cdef class List(Component):
 
     property content_description:
         def __get__(self):
-            cdef char buf[8000] #FIXME
-            obj_errcheck(OBJ_GetContentDesc(self.obj, buf, sizeof(buf)))
-            return buf
+            return self.get_string(sqListContentDescriptor)
 
     def __len__(self):
         cdef unsigned int count
@@ -320,23 +296,54 @@ cdef class List(Component):
                 obj_errcheck(OBJ_GetNextSibling(obj, &obj))
                 comp = create_component(obj)
             except Exception, e:
-                print e
                 return
             yield comp
-            
-        
     
 cdef class Method(Component):
-    pass
+    property signature:
+        def __get__(self):
+            return self.get_string(sqMethParamString)
 
 cdef class Property(Component):
     cdef unsigned int __len(self):
         cdef unsigned int count
         obj_errcheck(OBJ_GetValCount(self.obj, &count))
         return count
-
+    
     def __len__(self):
         return self.__len()
+
+    property maxlen:
+        def __get__(self):
+            cdef unsigned int count = 0
+            obj_errcheck(OBJ_GetMaxValCount(self.obj, &count))
+            return count    
+    
+    property format:
+        def __get__(self):
+            return self.get_string(sqPropFormatString)
+
+    def __repr__(self):
+        cdef char buf[8000] #FIXME
+        cdef size_t bufsize = sizeof(buf)
+        obj_errcheck(OBJ_GetSFormattedEx(self.obj, buf, &bufsize, NULL, 0))
+        #TODO: check size, index, use GetSArrayFormattedEx for array
+        return buf
+
+    def writeS(self, bytes value, int index=0):
+        obj_errcheck(OBJ_SetS(self.obj, <char*>value, index))
+
+    #def readS(self, int index=0):
+    #    cdef size_t bufsize = 32
+    #    cdef cython.array buf = cython.array(shape=(bufsize,), itemsize=sizeof(char))
+    #    #cdef char[:] cbuf = buf
+    #    err = OBJ_GetSFormattedEx(self.obj, buf.data, &bufsize, NULL, 0)
+    #    if err == PROPHANDLING_INPUT_BUFFER_TOO_SMALL:
+    #        buf = cython.array(shape=(bufsize,), itemsize=sizeof(char))
+    #        #cbuf = buf
+    #        obj_errcheck(OBJ_GetSFormattedEx(self.obj, buf.data, &bufsize, NULL, 0))
+    #    #return cbuf[:bufsize]
+    
 
 cdef class PropertyInt(Property):
     cpdef int get(self, int index = 0):
@@ -347,6 +354,12 @@ cdef class PropertyInt(Property):
     cpdef set(self, int value, int index = 0):
         obj_errcheck(OBJ_SetI(self.obj, value, index))
 
+    property value:
+        def __get__(self):
+            return self.get()
+        def __set__(self, int value):
+            self.set(value)
+
     def __getitem__(self, int index):
         if index < 0 or index >= len(self):
             raise IndexError
@@ -356,7 +369,7 @@ cdef class PropertyInt(Property):
         if index<0 or index >= len(self):
             raise IndexError
         self.set(value, index)
-        #obj_errcheck(OBJ_SetI(self.obj, value, index))
+        obj_errcheck(OBJ_SetI(self.obj, value, index))
         
     def get_dict(self):
         #TODO: do caching (with counter_attribute_changed checking for changes)
@@ -399,8 +412,10 @@ cdef class PropertyPtr(Property):
     pass
 
 cdef class PropertyString(Property):
-    pass
-
+    
+    cpdef bytes get(self, int index = 0):
+        return self.get_string(sqPropVal, index)
+    
 component_class = {ctList: List,
                    ctMeth: Method,
                    ctPropInt: PropertyInt,
@@ -423,9 +438,8 @@ dev = dmg.get_device_by_serial('BF*')
 lst = dev.get_list('Setting')
 cam = lst.get_object_by_name('Camera')
 for o in cam:
-    print o
-print cam.children
-
+    print "%-25s: %s"%(o.name, o)
+#print cam.children
 
 s = cam.get_object_by_name('FlashMode')
 print s.get_dict()
