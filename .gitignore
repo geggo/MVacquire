@@ -4,3 +4,5 @@ matrix-vision/
 generate/_mvDeviceManager.pxd
 generate/_mvDriverBaseEnums.pxd
 generate/_mvPropHandlingDatatypes.pxd
+_mvDeviceManager.c
+mv.pyd

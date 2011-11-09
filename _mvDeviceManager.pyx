@@ -5,6 +5,7 @@ from libc.stdlib cimport malloc, free
 from cpython.ref cimport Py_INCREF, Py_DECREF
 import cython
 #cimport cython
+import weakref
 
 cdef int visibility_level = cvExpert
 
@@ -23,9 +24,11 @@ cdef bint obj_errcheck(TPROPHANDLING_ERROR result) except True:
 
 cdef class DeviceManager:
     cdef HDMR _hdmr #handle device manager
+    cdef object devices
 
     def __cinit__(self):
         DMR_Init(&self._hdmr)
+        self.devices = weakref.WeakValueDictionary()
 
     def __dealloc__(self):
         DMR_Close()
@@ -48,29 +51,45 @@ cdef class DeviceManager:
                                      serial = device_info.serial) )
         return device_list            
 
-    def get_device_by_serial(self, bytes name, nr = 0):
+    cdef object get_device_by_serial(self, bytes name, int nr = 0):
         cdef HDEV hdev
         dmr_errcheck(DMR_GetDevice(&hdev, dmdsmSerial, name, nr, '*'))
         return Device(hdev)
 
+    def get_device(self, bytes serial, int nr = 0):
+        device = self.devices.get(serial)
+        if device is None:
+            device = self.get_device_by_serial(serial)
+            self.devices[serial] = device
+        return device
+        
     def __dir__(self):
         return [dev['serial'] for dev in self.get_device_list()]
 
     def __getattr__(self, bytes serial):
-        return self.get_device_by_serial(serial)
+        return self.get_device(serial)
+        #better: keep dict with weakref
 
 
 cdef class Device:
+    cdef object __weakref__
     cdef HDEV dev
     cdef HDRV drv
+    #cdef bint owner #owns device, need to close
     
     def __cinit__(self, HDEV dev):
         self.dev = dev
-        #if DMR_GetDriverHandle(self.dev, &self.drv) != DMR_NO_ERROR:
-        #    dmr_errcheck(DMR_OpenDevice(self.dev, &self.drv))
         dmr_errcheck(DMR_OpenDevice(self.dev, &self.drv))
-
+        # err = DMR_GetDriverHandle(self.dev, &self.drv)# != DMR_NO_ERROR:
+        # if  err != DMR_NO_ERROR:
+        #     print "open", DMR_ErrorCodeToString(err) #DMR_NOT_INITIALIZED ????
+        #     dmr_errcheck(DMR_OpenDevice(self.dev, &self.drv))
+        #     self.owner = True
+        # else:
+        #     self.owner = False
+            
     def __dealloc__(self):
+        #if self.owner:
         DMR_CloseDevice(self.drv, self.dev)
 
     def get_list(self, bytes name, flags = 0):
@@ -434,7 +453,7 @@ cdef create_component(HOBJ obj):
 
 
 dmg = DeviceManager()
-dev = dmg.get_device_by_serial('BF*')
+dev = dmg.get_device('BF004672')
 lst = dev.get_list('Setting')
 cam = lst.get_object_by_name('Camera')
 for o in cam:
