@@ -57,6 +57,7 @@ cdef class DeviceManager:
         return Device(hdev)
 
     def get_device(self, bytes serial, int nr = 0):
+        #FIXME: create unique handle
         device = self.devices.get(serial)
         if device is None:
             device = self.get_device_by_serial(serial)
@@ -72,24 +73,18 @@ cdef class DeviceManager:
 
 
 cdef class Device:
-    cdef object __weakref__
     cdef HDEV dev
     cdef HDRV drv
-    #cdef bint owner #owns device, need to close
+    cdef object __weakref__
     
     def __cinit__(self, HDEV dev):
         self.dev = dev
         dmr_errcheck(DMR_OpenDevice(self.dev, &self.drv))
-        # err = DMR_GetDriverHandle(self.dev, &self.drv)# != DMR_NO_ERROR:
-        # if  err != DMR_NO_ERROR:
-        #     print "open", DMR_ErrorCodeToString(err) #DMR_NOT_INITIALIZED ????
-        #     dmr_errcheck(DMR_OpenDevice(self.dev, &self.drv))
-        #     self.owner = True
-        # else:
-        #     self.owner = False
+        print "open device", hex(self.dev), hex(self.drv)
             
     def __dealloc__(self):
         #if self.owner:
+        print "close device", hex(self.dev), hex(self.drv)
         DMR_CloseDevice(self.drv, self.dev)
 
     def get_list(self, bytes name, flags = 0):
@@ -243,19 +238,6 @@ cdef class Component:
     #def __repr__(self):
     #    return "%s '%s'"%(type(self), self.name)
 
-cdef class ListIter:
-    cdef HOBJ obj
-    def __cinit__(self, HOBJ obj):
-        self.obj = obj
-
-    def __next__(self):
-        obj_errcheck(OBJ_GetNextSibling(self.obj, &self.obj))
-        try:
-            return create_component(self.obj)
-        except Exception, e:
-            #print "error __next__", e, self.obj
-            raise StopIteration
-
 cdef class List(Component):
 
     def __getitem__(self, bytes key):
@@ -270,10 +252,6 @@ cdef class List(Component):
         return [c.name for c in self if c.isvisible]
 
     def __getattr__(self, bytes name):
-        #if name in self.children:
-        #    return self[name]
-        #else:
-        #    raise AttributeError
         try:
             return self[name]
         except Exception, e:
@@ -300,11 +278,6 @@ cdef class List(Component):
         cdef unsigned int count
         obj_errcheck(OBJ_GetElementCount(self.obj, &count))
         return count
-
-    # def __iter__(self):
-    #     cdef HOBJ obj
-    #     obj_errcheck(OBJ_GetFirstChild(self.obj, &obj))
-    #     return ListIter(obj)
 
     def __iter__(self):
         cdef HOBJ obj
@@ -451,15 +424,4 @@ cdef create_component(HOBJ obj):
     component = cclass(obj)
     return component
 
-
 dmg = DeviceManager()
-dev = dmg.get_device('BF004672')
-lst = dev.get_list('Setting')
-cam = lst.get_object_by_name('Camera')
-for o in cam:
-    print "%-25s: %s"%(o.name, o)
-#print cam.children
-
-s = cam.get_object_by_name('FlashMode')
-print s.get_dict()
-
