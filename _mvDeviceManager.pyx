@@ -392,6 +392,9 @@ cdef class PropertyInt(Property):
         free(tvals)
         
         return d
+
+    cpdef bytes get(self, int index = 0):
+        return self.get_string(sqPropVal, index)
         
 
 cdef class PropertyInt64(Property):
@@ -405,8 +408,7 @@ cdef class PropertyPtr(Property):
 
 cdef class PropertyString(Property):
     
-    cpdef bytes get(self, int index = 0):
-        return self.get_string(sqPropVal, index)
+    
     
 component_class = {ctList: List,
                    ctMeth: Method,
@@ -418,6 +420,7 @@ component_class = {ctList: List,
                    }
 
 cdef create_component(HOBJ obj):
+    obj_errcheck(OBJ_CheckHandle(obj, hcmFull)) #necessary?
     cdef TComponentType component_type
     obj_errcheck(OBJ_GetType(obj, &component_type))
     cclass = component_class[component_type]
