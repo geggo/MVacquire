@@ -17,4 +17,25 @@ s = cam_settings['FlashMode']
 print s.get_dict()
 print s
 
+
+#get image
+#create request control (optional)
+rc, rc_idx  = dev.create_request_control('my request control')
+
+#request image, get nr of used request object
+nr_requested = dev.image_request(0) #rc_idx argument????
+
+#wait for image, returns image request nr
+nr = dev.image_request_wait(1000)
+
+#get request result/state
+requ_res, requ_state = dev.image_request_result(nr)
+
+#test for validity
+#if requ_res:
+
+#get buffer
+w, h = dev.image_request_buffer(nr)
     
+#cleanup
+dev.image_request_unlock(nr)

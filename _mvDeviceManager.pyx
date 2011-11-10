@@ -173,7 +173,13 @@ cdef class Device:
         width, height = buf.iWidth, buf.iHeight
         
         dmr_errcheck(DMR_ReleaseImageRequestBufferDesc(&buf))
-        return width, height        
+        return width, height
+
+    def image_request_result(self, int nr):
+        cdef RequestResult result
+        dmr_errcheck(DMR_GetImageRequestResultEx(self.drv, nr, &result, sizeof(result), 0, 0))
+        #print self.Request[0].State, self.Request[0].Result #TODO
+        return result.result, result.state
 
     def image_request_unlock(self, int nr):
         dmr_errcheck(DMR_ImageRequestUnlock(self.drv, nr))
