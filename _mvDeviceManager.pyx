@@ -23,25 +23,29 @@ cdef bint obj_errcheck(TPROPHANDLING_ERROR result) except True:
 
 
 cdef class DeviceManager:
-    cdef HDMR _hdmr #handle device manager
+    cdef HDMR _hdmr
     cdef object devices
 
     def __cinit__(self):
-        DMR_Init(&self._hdmr)
+        dmr_errcheck(DMR_Init(&self._hdmr))
         self.devices = weakref.WeakValueDictionary()
 
     def __dealloc__(self):
-        DMR_Close()
+        dmr_errcheck(DMR_Close())
 
-    property device_count:
+    cdef int get_device_count(self):
+        cdef unsigned int count
+        dmr_errcheck(DMR_GetDeviceCount(&count))
+        return <int>count
+
+    property device_count: #TODO: __len__
         def __get__(self):
-            cdef unsigned int count
-            DMR_GetDeviceCount(&count)
-            return count
+            return self.get_device_count()
     
     def get_device_list(self):
         device_list = []
         cdef TDMR_DeviceInfo device_info
+        cdef int i
         for i in range(self.device_count):
             dmr_errcheck(DMR_GetDeviceInfo(i, &device_info, sizeof(device_info)))
             
@@ -57,6 +61,7 @@ cdef class DeviceManager:
         return Device(hdev)
 
     def get_device(self, bytes serial, int nr = 0):
+        
         #FIXME: create unique handle
         device = self.devices.get(serial)
         if device is None:
@@ -71,6 +76,37 @@ cdef class DeviceManager:
         return self.get_device(serial)
         #better: keep dict with weakref
 
+#need to implement:
+#-----------------
+#class image request control -> List component
+#DMR_CreateRequestControl or properties/request_control/Base/
+#.mode e.g. ircmTrial -> dummy image created
+#.setting (e.g. Base -> DMR_CreateSetting ?)
+
+#device.isOpen -> is valid handle drv   (->getdriverhandle(dev, &drv))
+##device.ensureRequests(num) deprecated -> property RequestCount
+#device.imageRequestSingle()  -> DMR_ImageRequestSingle ? image request control -> see above
+#device.imageRequestWaitFor(timeout) nogil -> DMR_ImageRequestWaitFor -> nr!!
+
+#class image request: (after request wait for)
+#
+#.info -> DMR_GetImageRequestInfoEx
+#.buffer -> DMR_GetImageRequestBuffer -> creates Image buffer
+#
+#class ImageBuffer -> DMR_AllocImageRequestBufferDesc or DMR_AllocImageBuffer (for new buffer)
+#and DMR_ReleaseImageRequestBufferDesc or DMR_ReleaseImageBuffer
+#image request.imageRequestUnlock(num)
+
+#device.imageRequestReset(0,0) -> DMR_ImageRequestReset: terminate pending image requests
+#device.isRequestNrValid -> check for >=0 of answer of WaitFor
+
+#request = fi.getRequest(num) -> 
+#image request.isRequestOK(request) -> request.result == OK
+
+#request.requestResult
+#desc = request.getImageBufferDesc()
+#buffer = desc.getBuffer()
+
 
 cdef class Device:
     cdef HDEV dev
@@ -84,6 +120,7 @@ cdef class Device:
             
     def __dealloc__(self):
         #if self.owner:
+
         print "close device", hex(self.dev), hex(self.drv)
         DMR_CloseDevice(self.drv, self.dev)
 
@@ -120,8 +157,6 @@ cdef dict lists = {
     }
                               
 
-#check Handle
-
 #get type
 
 ##get val count
@@ -134,8 +169,7 @@ cdef dict lists = {
 #get/set X
 #get/set X array
 
-#get dict size
-#get X dict entries
+##get X dict entries
 #set X dict entries
 
 #create callback
@@ -144,20 +178,14 @@ cdef dict lists = {
 #detach callback
 
 #execute
-#get S param list
+##get S param list
 
-#get changed counter
-#get changed counter attr
-
-#get first child
-#get next sibling
-#get first sibling
-#get last sibling
-#get parent
+#?get next sibling?
+#?get first sibling?
+#?get last sibling?
+##get parent
 
 #is constant defined (property)
-##is default
-##restore default
 
 #(string)
 #get/set binary
@@ -170,7 +198,7 @@ cdef char* StringConstructionFunction(char* buf, size_t size):
 
 cdef class Component:
     cdef HOBJ obj
-    #cdef object value_dict
+    #cdef HOBJ parent
 
     def __cinit__(self, HOBJ obj):
         self.obj = obj
@@ -180,7 +208,7 @@ cdef class Component:
             result = OBJ_CheckHandle(self.obj, hcmFull)
             return (result == PROPHANDLING_NO_ERROR)
 
-    def get_string(self, TOBJ_StringQuery sq, int index = 0):
+    cpdef bytes get_string(self, TOBJ_StringQuery sq, int index = 0):
         cdef char* res
         obj_errcheck(OBJ_GetSWithInplaceConstruction(
             self.obj,
@@ -231,6 +259,12 @@ cdef class Component:
             cdef unsigned int counter = 0
             obj_errcheck(OBJ_GetChangedCounterAttr(self.obj, &counter))
             return counter
+
+    property parent:
+        def __get__(self):
+            cdef HOBJ parent
+            obj_errcheck(OBJ_GetParent(self.obj, &parent))
+            return create_component(parent)
 
     #def __str__(self):
     #    return "Component '%s'"%self.name
@@ -393,8 +427,8 @@ cdef class PropertyInt(Property):
         
         return d
 
-    cpdef bytes get(self, int index = 0):
-        return self.get_string(sqPropVal, index)
+    #cpdef bytes get(self, int index = 0):
+    #    return self.get_string(sqPropVal, index)
         
 
 cdef class PropertyInt64(Property):
@@ -407,10 +441,10 @@ cdef class PropertyPtr(Property):
     pass
 
 cdef class PropertyString(Property):
+    pass
     
     
-    
-component_class = {ctList: List,
+cdef component_class = {ctList: List,
                    ctMeth: Method,
                    ctPropInt: PropertyInt,
                    ctPropInt64: PropertyInt64,
