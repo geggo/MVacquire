@@ -119,8 +119,6 @@ cdef class Device:
         print "open device", hex(self.dev), hex(self.drv)
             
     def __dealloc__(self):
-        #if self.owner:
-
         print "close device", hex(self.dev), hex(self.drv)
         DMR_CloseDevice(self.drv, self.dev)
 
@@ -132,13 +130,67 @@ cdef class Device:
                                   list_type,
                                   flags,
                                   &hlist))
-        return List(hlist) #could also be: OBJ
+        return List(hlist)
 
     def __dir__(self):
         return lists.keys()
     
     def __getattr__(self, bytes name):
         return self.get_list(name)
+
+    def create_request_control(self, bytes name, bytes parent = <bytes>'Base'):
+        #List rc, int nr = create_request_control(name, parent = 'Base')
+        cdef HLIST obj
+        cdef int index
+        dmr_errcheck(DMR_CreateRequestControl(self.drv,
+                                              name, parent,
+                                              &obj, &index))
+        return create_component(obj), index
+
+    def image_request(self, int rc = 0):
+        """image_request(int rc = 0)
+        send an image request to the device driver.
+        
+        arguments:
+        rc: number of the request control to use for this request
+        """
+        cdef int nr
+        dmr_errcheck(DMR_ImageRequestSingle(self.drv, rc, &nr))
+        return nr
+
+    def image_request_wait(self, int timeout):
+        cdef int nr
+        cdef TDMR_ERROR err
+        with nogil:
+            err = DMR_ImageRequestWaitFor(self.drv, timeout, 0, &nr)
+        dmr_errcheck(err) #TODO: check for timeout -> special exception
+        return nr #TODO: create image_request object
+
+    def image_request_buffer(self, int nr):
+        cdef ImageBuffer* buf = NULL
+        dmr_errcheck(DMR_GetImageRequestBuffer(self.drv, nr, &buf))
+        #TODO: copy content
+        width, height = buf.iWidth, buf.iHeight
+        
+        dmr_errcheck(DMR_ReleaseImageRequestBufferDesc(&buf))
+        return width, height        
+
+    def image_request_unlock(self, int nr):
+        dmr_errcheck(DMR_ImageRequestUnlock(self.drv, nr))
+
+    def image_request_reset(self, int rc=0):
+        dmr_errcheck(DMR_ImageRequestReset(self.drv, rc, 0))
+
+
+    
+        
+
+    
+    
+        
+                                              
+    
+    
                               
 cdef dict lists = {
     'Setting': dmltSetting,
@@ -155,7 +207,12 @@ cdef dict lists = {
     'Event_sub_system_results': dmltEventSubSystemResults,
     'Image_memory_manager': dmltImageMemoryManager,
     }
-                              
+       
+
+
+
+
+                       
 
 #get type
 
@@ -460,5 +517,6 @@ cdef create_component(HOBJ obj):
     cclass = component_class[component_type]
     component = cclass(obj)
     return component
+
 
 dmg = DeviceManager()

@@ -171,7 +171,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TDMR_ERROR DMR_ImageRequestConfigure(HDRV hDrv, int requestNr, int reserved, void *pReserved)
 
-    TDMR_ERROR DMR_ImageRequestWaitFor(HDRV hDrv, int timeout_ms, int queueNr, int *requestNr)
+    TDMR_ERROR DMR_ImageRequestWaitFor(HDRV hDrv, int timeout_ms, int queueNr, int *requestNr) nogil
 
     TDMR_ERROR DMR_GetImageRequestBuffer(HDRV hDrv, int requestNr, ImageBuffer **ppBuffer)
 
