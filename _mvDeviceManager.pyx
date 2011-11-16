@@ -214,10 +214,6 @@ cdef dict lists = {
     'Image_memory_manager': dmltImageMemoryManager,
     }
        
-
-
-
-
                        
 
 #get type
@@ -261,7 +257,6 @@ cdef char* StringConstructionFunction(char* buf, size_t size):
 
 cdef class Component:
     cdef HOBJ obj
-    #cdef HOBJ parent
 
     def __cinit__(self, HOBJ obj):
         self.obj = obj
@@ -271,7 +266,7 @@ cdef class Component:
             result = OBJ_CheckHandle(self.obj, hcmFull)
             return (result == PROPHANDLING_NO_ERROR)
 
-    cpdef bytes get_string(self, TOBJ_StringQuery sq, int index = 0):
+    cdef bytes get_string(self, TOBJ_StringQuery sq, int index = 0):
         cdef char* res
         obj_errcheck(OBJ_GetSWithInplaceConstruction(
             self.obj,
@@ -280,7 +275,7 @@ cdef class Component:
             StringConstructionFunction,
             0, index))
         cdef object result = <object><void*>res
-        Py_DECREF(result)
+        Py_DECREF(result) #compensate for INCREF in StringConstructionFunction
         return result
 
     property name:
@@ -328,6 +323,12 @@ cdef class Component:
             cdef HOBJ parent
             obj_errcheck(OBJ_GetParent(self.obj, &parent))
             return create_component(parent)
+
+#    def __get__(self, instance, owner):
+#        print "on get", self, instance, owner
+
+#    def __set__(self, instance, value):
+#        print "on set", self, instance, value
 
     #def __str__(self):
     #    return "Component '%s'"%self.name
@@ -394,13 +395,13 @@ cdef class Method(Component):
             return self.get_string(sqMethParamString)
 
 cdef class Property(Component):
-    cdef unsigned int __len(self):
+    cdef unsigned int len(self):
         cdef unsigned int count
         obj_errcheck(OBJ_GetValCount(self.obj, &count))
         return count
     
     def __len__(self):
-        return self.__len()
+        return self.len()
 
     property maxlen:
         def __get__(self):
@@ -418,6 +419,22 @@ cdef class Property(Component):
         obj_errcheck(OBJ_GetSFormattedEx(self.obj, buf, &bufsize, NULL, 0))
         #TODO: check size, index, use GetSArrayFormattedEx for array
         return buf
+
+    def __getitem__(self, int index):
+        if index < 0 or index >= len(self):
+            raise IndexError
+        return self.get(index)
+
+    def __setitem__(self, int index, value):
+        if index<0 or index >= len(self):
+            raise IndexError
+        self.set(value, index)
+    
+    property value:
+        def __get__(self):
+            return self.get()
+        def __set__(self, value):
+            self.set(value)
 
     def writeS(self, bytes value, int index=0):
         obj_errcheck(OBJ_SetS(self.obj, <char*>value, index))
@@ -443,23 +460,6 @@ cdef class PropertyInt(Property):
     cpdef set(self, int value, int index = 0):
         obj_errcheck(OBJ_SetI(self.obj, value, index))
 
-    property value:
-        def __get__(self):
-            return self.get()
-        def __set__(self, int value):
-            self.set(value)
-
-    def __getitem__(self, int index):
-        if index < 0 or index >= len(self):
-            raise IndexError
-        return self.get(index)
-
-    def __setitem__(self, int index, int value):
-        if index<0 or index >= len(self):
-            raise IndexError
-        self.set(value, index)
-        obj_errcheck(OBJ_SetI(self.obj, value, index))
-        
     def get_dict(self):
         #TODO: do caching (with counter_attribute_changed checking for changes)
         cdef unsigned int size = 0
@@ -495,18 +495,39 @@ cdef class PropertyInt(Property):
         
 
 cdef class PropertyInt64(Property):
-    pass
+    cpdef int64_type get(self, int index = 0):
+        cdef int64_type value
+        obj_errcheck(OBJ_GetI64(self.obj, &value, index))
+        return value
+
+    cpdef set(self, int64_type value, int index = 0):
+        obj_errcheck(OBJ_SetI64(self.obj, value, index))
 
 cdef class PropertyFloat(Property):
-    pass
+    cpdef double get(self, int index = 0):
+        cdef double value
+        obj_errcheck(OBJ_GetF(self.obj, &value, index))
+        return value
+
+    cpdef set(self, double value, int index = 0):
+        obj_errcheck(OBJ_SetF(self.obj, value, index))
 
 cdef class PropertyPtr(Property):
-    pass
+    cpdef long int get(self, int index = 0):
+        cdef void* value
+        obj_errcheck(OBJ_GetP(self.obj, &value, index))
+        return <long int>value
+
+    cpdef set(self, long int value, int index = 0):
+        obj_errcheck(OBJ_SetP(self.obj, value, index))
 
 cdef class PropertyString(Property):
-    pass
-    
-    
+    cpdef bytes get(self, int index = 0):
+        return self.get_string(sqPropVal, index)
+
+    cpdef set(self, bytes value, int index = 0):
+        self.writeS(value, index)
+
 cdef component_class = {ctList: List,
                    ctMeth: Method,
                    ctPropInt: PropertyInt,
