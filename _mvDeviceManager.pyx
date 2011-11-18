@@ -263,8 +263,8 @@ cdef class Component:
 
     property is_valid:
         def __get__(self):
-            result = OBJ_CheckHandle(self.obj, hcmFull)
-            return (result == PROPHANDLING_NO_ERROR)
+            cdef int err = OBJ_CheckHandle(self.obj, hcmFull)
+            return (err == PROPHANDLING_NO_ERROR)
 
     cdef bytes get_string(self, TOBJ_StringQuery sq, int index = 0):
         cdef char* res
@@ -340,8 +340,8 @@ cdef class List(Component):
 
     def __getitem__(self, bytes key):
         cdef HOBJ obj = 0
-        result = OBJ_GetHandleEx(self.obj, key, &obj, 0, 1) #only search in this list
-        if result == PROPHANDLING_NO_ERROR:
+        cdef int err = OBJ_GetHandleEx(self.obj, key, &obj, 0, 1) #only search in this list
+        if err == PROPHANDLING_NO_ERROR:
             return create_component(obj)
         else:
             raise IndexError
@@ -416,7 +416,7 @@ cdef class Property(Component):
     def __repr__(self):
         cdef char buf[8000] #FIXME
         cdef size_t bufsize = sizeof(buf)
-        obj_errcheck(OBJ_GetSFormattedEx(self.obj, buf, &bufsize, NULL, 0))
+        obj_errcheck(OBJ_GetSFormattedEx(self.obj, buf, &bufsize, NULL, 0)) #FIXME: get needed buffer size
         #TODO: check size, index, use GetSArrayFormattedEx for array
         return buf
 
@@ -472,14 +472,14 @@ cdef class PropertyInt(Property):
         for i in range(size):
             buf[i] = <char*>malloc(bufsize * sizeof(char))
             
-        result = OBJ_GetIDictEntries(self.obj,
+        cdef int err = OBJ_GetIDictEntries(self.obj,
                                      buf,
                                      bufsize,
                                      tvals,
                                      size)
         #TODO: see doc: resize buffer if too small
         d = dict()
-        if result == PROPHANDLING_NO_ERROR:
+        if err == PROPHANDLING_NO_ERROR:
             for i in range(size):
                 d[buf[i]] = tvals[i]
 
@@ -518,8 +518,8 @@ cdef class PropertyPtr(Property):
         obj_errcheck(OBJ_GetP(self.obj, &value, index))
         return <long int>value
 
-    cpdef set(self, long int value, int index = 0):
-        obj_errcheck(OBJ_SetP(self.obj, value, index))
+    cpdef set(self, long int value, int index = 0): #TODO: PyCapsule?
+        obj_errcheck(OBJ_SetP(self.obj, <void *>value, index))
 
 cdef class PropertyString(Property):
     cpdef bytes get(self, int index = 0):
