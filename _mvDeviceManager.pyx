@@ -1,11 +1,12 @@
 # -*- coding: latin-1 -*-
 from _mvDeviceManager cimport *
 from libc.stdlib cimport malloc, free
-#from cpython.string cimport PyString_FromStringAndSize
 from cpython.ref cimport Py_INCREF, Py_DECREF
 import cython
-#cimport cython
 import weakref
+#import numpy as np
+#cimport numpy as np
+#from libc.string cimport memcpy
 
 cdef int visibility_level = cvExpert
 
@@ -49,10 +50,11 @@ cdef class DeviceManager:
         for i in range(self.device_count):
             dmr_errcheck(DMR_GetDeviceInfo(i, &device_info, sizeof(device_info)))
             
-            device_list.append( dict(id = device_info.deviceId,
-                                     family = device_info.family,
-                                     product = device_info.product,
-                                     serial = device_info.serial) )
+            #device_list.append( dict(deviceId = device_info.deviceId,
+            #                         family = device_info.family,
+            #                         product = device_info.product,
+            #                         serial = device_info.serial) )
+            device_list.append(device_info)
         return device_list            
 
     cdef object get_device_by_serial(self, bytes name, int nr = 0):
