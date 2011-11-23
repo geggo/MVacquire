@@ -109,6 +109,8 @@ cdef class DeviceManager:
 #desc = request.getImageBufferDesc()
 #buffer = desc.getBuffer()
 
+#cdef void array_free_callback(char* data):
+#    print "(not) freeing image data"
 
 cdef class Device:
     cdef HDEV dev
@@ -124,6 +126,7 @@ cdef class Device:
         print "close device", hex(self.dev), hex(self.drv)
         DMR_CloseDevice(self.drv, self.dev)
 
+    #cdef List get_list(self, bytes name, flags = 0):
     def get_list(self, bytes name, flags = 0):
         cdef HLIST hlist
         list_type = lists[name]
@@ -141,13 +144,12 @@ cdef class Device:
         return self.get_list(name)
 
     def create_request_control(self, bytes name, bytes parent = <bytes>'Base'):
-        #List rc, int nr = create_request_control(name, parent = 'Base')
-        cdef HLIST obj
-        cdef int index
-        dmr_errcheck(DMR_CreateRequestControl(self.drv,
-                                              name, parent,
-                                              &obj, &index))
-        return create_component(obj), index
+        cdef HLIST obj = 0
+        dmr_errcheck(DMR_CreateRequestControl(self.drv, name, parent, &obj, NULL))
+        return create_component(obj)
+    
+    def delete_request_control(self, bytes name):
+        dmr_errcheck(DMR_DeleteList(self.drv, name, dmltRequestCtrl))
 
     def image_request(self, int rc = 0):
         """image_request(int rc = 0)
@@ -168,14 +170,47 @@ cdef class Device:
         dmr_errcheck(err) #TODO: check for timeout -> special exception
         return nr #TODO: create image_request object
 
+    
+
     def image_request_buffer(self, int nr):
+        """Return image data as buffer"""
         cdef ImageBuffer* buf = NULL
         dmr_errcheck(DMR_GetImageRequestBuffer(self.drv, nr, &buf))
-        #TODO: copy content
-        width, height = buf.iWidth, buf.iHeight
+        
+        cdef int w = buf.iWidth
+        cdef int h = buf.iHeight
+        cdef int numbytes = buf.iBytesPerPixel
+        cdef int c = buf.iChannelCount
+
+        #print w, h, numbytes, c
+
+        #cdef np.ndarray arr = np.empty( (w,h,c), dtype = np.uint8)
+        #memcpy(arr.data, buf.vpData, numbytes)
+
+        #cdef cython.array img = <unsigned char[:(w*h*c)]> <unsigned char*>buf.vpData
+        #cdef cython.array img
+                
+        if buf.pixelFormat in [ibpfMono8, 
+                               ibpfRGBx888Packed,
+                               ibpfRGBx888Planar,
+                               ibpfRGB888Packed,
+                               ]:
+            
+            #img = cython.array( shape = (w,h,c), 
+            #                    itemsize = numbytes,
+            #                    format = 'c', #fixme
+            #                    mode = 'c', 
+            #                    allocate_buffer=True) #allocate memory
+            ##img.data = <char*> buf.vpData
+            ##img.callback_free_data = array_free_callback
+            ##img_copy = img.copy()
+            #memcpy(img.data, buf.vpData, w*h*c*numbytes)
+            img = None
+        else:
+            img= None
         
         dmr_errcheck(DMR_ReleaseImageRequestBufferDesc(&buf))
-        return width, height
+        return w, h, img
 
     def image_request_result(self, int nr):
         cdef RequestResult result
@@ -190,7 +225,7 @@ cdef class Device:
         dmr_errcheck(DMR_ImageRequestReset(self.drv, rc, 0))
 
 
-    
+ 
         
 
     

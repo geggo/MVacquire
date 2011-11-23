@@ -381,7 +381,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TPROPHANDLING_ERROR OBJ_GetHandleEx(HLIST hList, char *pObjName, HOBJ *phObj, unsigned int searchmode, int maxSearchDepth)
 
-    ctypedef char * (*SCF)(char *, size_t)
+    ctypedef char * (*SCF)(char *, size_t) #FIXME: should be ...(const char*, size_t)
 
     TPROPHANDLING_ERROR OBJ_GetSWithInplaceConstruction(HOBJ hObj, TOBJ_StringQuery sq, char **pResult, SCF constructionFunc, int mode, int reserved)
 
