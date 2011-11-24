@@ -4,9 +4,7 @@ from libc.stdlib cimport malloc, free
 from cpython.ref cimport Py_INCREF, Py_DECREF
 import cython
 import weakref
-#import numpy as np
-#cimport numpy as np
-#from libc.string cimport memcpy
+from libc.string cimport memcpy
 
 cdef int visibility_level = cvExpert
 
@@ -126,8 +124,7 @@ cdef class Device:
         print "close device", hex(self.dev), hex(self.drv)
         DMR_CloseDevice(self.drv, self.dev)
 
-    #cdef List get_list(self, bytes name, flags = 0):
-    def get_list(self, bytes name, flags = 0):
+    cdef List get_list(self, bytes name, flags = 0):
         cdef HLIST hlist
         list_type = lists[name]
         dmr_errcheck(DMR_FindList(self.drv,
@@ -170,42 +167,39 @@ cdef class Device:
         dmr_errcheck(err) #TODO: check for timeout -> special exception
         return nr #TODO: create image_request object
 
-    
-
     def image_request_buffer(self, int nr):
         """Return image data as buffer"""
+
+        #TODO: check if image request is valid (not unlocked)
         cdef ImageBuffer* buf = NULL
         dmr_errcheck(DMR_GetImageRequestBuffer(self.drv, nr, &buf))
         
         cdef int w = buf.iWidth
         cdef int h = buf.iHeight
-        cdef int numbytes = buf.iBytesPerPixel
+        cdef int bytesperpixel = buf.iBytesPerPixel
         cdef int c = buf.iChannelCount
-
-        #print w, h, numbytes, c
 
         #cdef np.ndarray arr = np.empty( (w,h,c), dtype = np.uint8)
         #memcpy(arr.data, buf.vpData, numbytes)
 
         #cdef cython.array img = <unsigned char[:(w*h*c)]> <unsigned char*>buf.vpData
-        #cdef cython.array img
+        cdef cython.array img
                 
         if buf.pixelFormat in [ibpfMono8, 
-                               ibpfRGBx888Packed,
-                               ibpfRGBx888Planar,
+                               #ibpfRGBx888Packed,
+                               #ibpfRGBx888Planar,
                                ibpfRGB888Packed,
                                ]:
             
-            #img = cython.array( shape = (w,h,c), 
-            #                    itemsize = numbytes,
-            #                    format = 'c', #fixme
-            #                    mode = 'c', 
-            #                    allocate_buffer=True) #allocate memory
+            img = cython.array( shape = (w,h,c), 
+                                itemsize = bytesperpixel,
+                                format = 'B', #H for uint16, 
+                                mode = 'c', 
+                                allocate_buffer=True) #allocate memory
             ##img.data = <char*> buf.vpData
             ##img.callback_free_data = array_free_callback
             ##img_copy = img.copy()
-            #memcpy(img.data, buf.vpData, w*h*c*numbytes)
-            img = None
+            memcpy(img.data, buf.vpData, w*h*c*bytesperpixel)
         else:
             img= None
         

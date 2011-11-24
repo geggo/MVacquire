@@ -1,3 +1,5 @@
+import numpy as np
+
 print "pre import"
 import mv
 print "post import"
@@ -25,9 +27,6 @@ for p in pf:
     print "%-25s: %s"%(p.name, p)
 
 
-
-
-
 ## get image
 #create request control (optional)
 rc  = dev.create_request_control('my request control')
@@ -45,12 +44,12 @@ requ_res, requ_state = dev.image_request_result(nr)
 #if requ_res:
 
 #get buffer
-#w, h, img = dev.image_request_buffer(nr)
-#print "got image %dx%d"%(w, h)
-#print img    
-#img_array = np.asarray(<np.uint8_t[:w, :h, :c]> img)
+w, h, img = dev.image_request_buffer(nr)
+print "got image %dx%d"%(w, h)
+print img    
+img_array = np.asarray(img)
 
 #cleanup
-dev.image_request_unlock(nr)
+#dev.image_request_unlock(nr)
 
-dev.delete_request_control('my request control')
+#dev.delete_request_control('my request control')
