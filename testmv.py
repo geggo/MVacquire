@@ -1,4 +1,5 @@
 import numpy as np
+import pylab as plt
 
 print "pre import"
 import mv
@@ -26,30 +27,33 @@ pf = cam_settings.PseudoFeatures
 for p in pf:
     print "%-25s: %s"%(p.name, p)
 
-
 ## get image
 #create request control (optional)
 rc  = dev.create_request_control('my request control')
 
 #request image, get nr of used request object
-nr_requested = dev.image_request(0) #rc_idx argument????
+nr_requested = dev.image_request() #rc_idx argument????
 
 #wait for image, returns image request nr
-nr = dev.image_request_wait(1000)
+image_result = dev.get_image(timeout = 1.0)
 
 #get request result/state
-requ_res, requ_state = dev.image_request_result(nr)
+#requ_res, requ_state = dev.image_request_result(nr)
+print image_result.result, image_result.state
 
 #test for validity
 #if requ_res:
 
 #get buffer
-w, h, img = dev.image_request_buffer(nr)
-print "got image %dx%d"%(w, h)
-print img    
-img_array = np.asarray(img)
+buf = image_result.get_buffer()
+print "got image", buf.shape, buf
+img = np.asarray(buf)
+del image_result
 
 #cleanup
-#dev.image_request_unlock(nr)
+dev.delete_request_control('my request control')
 
-#dev.delete_request_control('my request control')
+plt.imshow(np.squeeze(img))
+plt.show()
+
+

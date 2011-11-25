@@ -6,28 +6,30 @@ import cython
 import weakref
 from libc.string cimport memcpy
 
-cdef int visibility_level = cvExpert
+cpdef int visibility_level = cvExpert
 
 class MVError(RuntimeError):
     def __init__(self, msg = ''):
         RuntimeError.__init__(self, msg)
 
-class MVTimoutError(MVError):
+class MVTimeoutError(MVError):
     def __init__(self, msg = ''):
         MVError.__init__(self, 'Timeout in image acquisition')
 
 cdef bint dmr_errcheck(TDMR_ERROR result) except True:
     cdef bint is_error = (result != DMR_NO_ERROR)
     if is_error:
-        raise MVError, DMR_ErrorCodeToString(result)#Exception, DMR_ErrorCodeToString(result)
+        if result == DEV_WAIT_FOR_REQUEST_FAILED:
+            raise MVTimeoutError
+        else:
+            raise MVError, DMR_ErrorCodeToString(result)
     return is_error
 
 cdef bint obj_errcheck(TPROPHANDLING_ERROR result) except True:
     cdef bint is_error = (result != PROPHANDLING_NO_ERROR)
     if is_error:
-        raise Exception, DMR_ErrorCodeToString(result)
+        raise MVError, DMR_ErrorCodeToString(result)
     return is_error
-
 
 cdef class DeviceManager:
     cdef HDMR _hdmr
@@ -58,7 +60,6 @@ cdef class DeviceManager:
         cdef int i
         for i in range(self.device_count):
             dmr_errcheck(DMR_GetDeviceInfo(i, &device_info, sizeof(device_info)))
-            
             #device_list.append( dict(deviceId = device_info.deviceId,
             #                         family = device_info.family,
             #                         product = device_info.product,
@@ -84,7 +85,6 @@ cdef class DeviceManager:
 
     def __getattr__(self, bytes serial):
         return self.get_device(serial)
-        #better: keep dict with weakref
 
 #need to implement:
 #-----------------
@@ -169,30 +169,72 @@ cdef class Device:
         dmr_errcheck(DMR_ImageRequestSingle(self.drv, rc, &nr))
         return nr
 
-    def image_request_wait(self, int timeout):
+    def get_image(self, double timeout = 1.0):
         cdef int nr
         cdef TDMR_ERROR err
         with nogil:
-            err = DMR_ImageRequestWaitFor(self.drv, timeout, 0, &nr)
-        dmr_errcheck(err) #TODO: check for timeout -> special exception
-        return nr #TODO: create image_request object
+            err = DMR_ImageRequestWaitFor(self.drv, int(timeout*1000), 0, &nr)
+            #DEV_WAIT_FOR_REQUEST_FAILED 
+        dmr_errcheck(err) #note: special exception for timeout (queue empty)
+        res = ImageResult(self.drv, nr)
+        assert res.result == rrOK and res.state == rsReady
+        return res
+        
+    def image_request_result(self, int nr):
+        cdef RequestResult result
+        dmr_errcheck(DMR_GetImageRequestResultEx(self.drv, nr, &result, sizeof(result), 0, 0))
+        #print self.Request[0].State, self.Request[0].Result #TODO
+        return result.result, result.state
 
-    def image_request_buffer(self, int nr):
-        """Return image data as buffer"""
+    def image_request_reset(self, int rc=0):
+        dmr_errcheck(DMR_ImageRequestReset(self.drv, rc, 0))
+
+cdef class ImageResult:
+    cdef HDRV drv
+    cdef int nr
+    cdef object __weakref__
+    
+    def __cinit__(self, HDRV drv, int nr):
+        self.drv = drv
+        self.nr = nr
+        
+    def __dealloc__(self):
+        self.unlock()
+
+    cdef unlock(self):
+        dmr_errcheck(DMR_ImageRequestUnlock(self.drv, self.nr))
+        
+    cdef RequestResult get_result(self):
+        cdef RequestResult result
+        dmr_errcheck(DMR_GetImageRequestResultEx(self.drv, self.nr, &result, sizeof(result), 0, 0))
+        return result
+
+    property result:
+        def __get__(self):
+            cdef RequestResult result = self.get_result()
+            return result.result
+
+    property state:
+        def __get__(self):
+            cdef RequestResult result = self.get_result()
+            return result.state
+            
+        #result.result: rrOK, rrTimeout
+        #result.state: must be 'rsReady'
+        
+
+    def get_buffer(self):
+        """Return image data as memory view"""
 
         #TODO: check if image request is valid (not unlocked)
+        
         cdef ImageBuffer* buf = NULL
-        dmr_errcheck(DMR_GetImageRequestBuffer(self.drv, nr, &buf))
+        dmr_errcheck(DMR_GetImageRequestBuffer(self.drv, self.nr, &buf))
         
         cdef int w = buf.iWidth
         cdef int h = buf.iHeight
         cdef int bytesperpixel = buf.iBytesPerPixel
         cdef int c = buf.iChannelCount
-
-        #cdef np.ndarray arr = np.empty( (w,h,c), dtype = np.uint8)
-        #memcpy(arr.data, buf.vpData, numbytes)
-
-        #cdef cython.array img = <unsigned char[:(w*h*c)]> <unsigned char*>buf.vpData
         cdef cython.array img
                 
         if buf.pixelFormat in [ibpfMono8, 
@@ -201,34 +243,21 @@ cdef class Device:
                                ibpfRGB888Packed,
                                ]:
             
-            img = cython.array( shape = (w,h,c), 
+            img = cython.array( shape = (h,w,c), 
                                 itemsize = bytesperpixel,
                                 format = 'B', #H for uint16, 
                                 mode = 'c', 
                                 allocate_buffer=True) #allocate memory
-            ##img.data = <char*> buf.vpData
-            ##img.callback_free_data = array_free_callback
-            ##img_copy = img.copy()
             memcpy(img.data, buf.vpData, w*h*c*bytesperpixel)
         else:
             img= None
         
         dmr_errcheck(DMR_ReleaseImageRequestBufferDesc(&buf))
-        return w, h, img
-
-    def image_request_result(self, int nr):
-        cdef RequestResult result
-        dmr_errcheck(DMR_GetImageRequestResultEx(self.drv, nr, &result, sizeof(result), 0, 0))
-        #print self.Request[0].State, self.Request[0].Result #TODO
-        return result.result, result.state
-
-    def image_request_unlock(self, int nr):
-        dmr_errcheck(DMR_ImageRequestUnlock(self.drv, nr))
-
-    def image_request_reset(self, int rc=0):
-        dmr_errcheck(DMR_ImageRequestReset(self.drv, rc, 0))
-
-
+        return img.memview
+        #cdef unsigned char[:,:,:] memview = img
+        #return memview # img
+    
+    
 cdef dict lists = {
     'Setting': dmltSetting,
     'Request': dmltRequest,
