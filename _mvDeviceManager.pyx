@@ -8,10 +8,18 @@ from libc.string cimport memcpy
 
 cdef int visibility_level = cvExpert
 
+class MVError(RuntimeError):
+    def __init__(self, msg = ''):
+        RuntimeError.__init__(self, msg)
+
+class MVTimoutError(MVError):
+    def __init__(self, msg = ''):
+        MVError.__init__(self, 'Timeout in image acquisition')
+
 cdef bint dmr_errcheck(TDMR_ERROR result) except True:
     cdef bint is_error = (result != DMR_NO_ERROR)
     if is_error:
-        raise Exception, DMR_ErrorCodeToString(result)
+        raise MVError, DMR_ErrorCodeToString(result)#Exception, DMR_ErrorCodeToString(result)
     return is_error
 
 cdef bint obj_errcheck(TPROPHANDLING_ERROR result) except True:
@@ -37,10 +45,13 @@ cdef class DeviceManager:
         dmr_errcheck(DMR_GetDeviceCount(&count))
         return <int>count
 
-    property device_count: #TODO: __len__
+    property device_count:
         def __get__(self):
             return self.get_device_count()
     
+    def __len__(self):
+        return self.get_device_count()
+
     def get_device_list(self):
         device_list = []
         cdef TDMR_DeviceInfo device_info
@@ -61,7 +72,6 @@ cdef class DeviceManager:
         return Device(hdev)
 
     def get_device(self, bytes serial, int nr = 0):
-        
         #FIXME: create unique handle
         device = self.devices.get(serial)
         if device is None:
@@ -219,16 +229,6 @@ cdef class Device:
         dmr_errcheck(DMR_ImageRequestReset(self.drv, rc, 0))
 
 
- 
-        
-
-    
-    
-        
-                                              
-    
-    
-                              
 cdef dict lists = {
     'Setting': dmltSetting,
     'Request': dmltRequest,
