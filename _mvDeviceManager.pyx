@@ -474,12 +474,24 @@ cdef class Property(Component):
             return self.get_string(sqPropFormatString)
 
     def __repr__(self):
-        cdef char buf[8000] #FIXME
-        cdef size_t bufsize = sizeof(buf)
-        obj_errcheck(OBJ_GetSFormattedEx(self.obj, buf, &bufsize, NULL, 0)) #FIXME: get needed buffer size
-        #TODO: check size, index, use GetSArrayFormattedEx for array
-        return buf
+        return repr(self.value)
 
+    def __str__(self):
+        if self.maxlen == 1:
+            return self.getS()
+        else:
+            return str([self.getS(i) for i in range(len(self))])
+        
+        #return 'x'*bufsize
+
+    #    try:
+    #        s = self.format%self.get(0)
+    #    except ValueError,e:
+    #        print "unknown format string: ", self.format
+    #        print e
+    #        s = repr(self.get(0))
+    #    return s
+        
     def __getitem__(self, int index):
         if index < 0 or index >= len(self):
             raise IndexError
@@ -492,12 +504,34 @@ cdef class Property(Component):
     
     property value:
         def __get__(self):
-            return self.get()
+            if self.maxlen == 1:
+                return self.get(0)
+            else:
+                return [val for val in self]
         def __set__(self, value):
-            self.set(value)
+            if self.maxlen == 1:
+                value = (value,) #FIXME: check if value is already length 1 array
+            for i, val in enumerate(value):
+                try:
+                    self.set(val, i)
+                except TypeError:
+                    self.set(self.string_to_value(val), i)
+                
+    cdef object string_to_value(self, bytes s):
+        raise MVError("conversion from string not implemented for %s"%type(self))
 
     def writeS(self, bytes value, int index=0):
         obj_errcheck(OBJ_SetS(self.obj, <char*>value, index))
+
+    def getS(self, int index=0):
+        cdef size_t bufsize
+        obj_errcheck(OBJ_GetSFormattedEx(self.obj, NULL, &bufsize, NULL, index))
+        cdef char* buf = <char*>malloc(bufsize)
+        cdef TPROPHANDLING_ERROR err = OBJ_GetSFormattedEx(self.obj, buf, &bufsize, NULL, index)
+        cdef bytes s = buf[:bufsize-1]
+        free(buf)
+        obj_errcheck(err)
+        return s
 
     #def readS(self, int index=0):
     #    cdef size_t bufsize = 32
@@ -520,6 +554,10 @@ cdef class PropertyInt(Property):
     cpdef set(self, int value, int index = 0):
         obj_errcheck(OBJ_SetI(self.obj, value, index))
 
+    cdef object string_to_value(self, bytes s):
+        #TODO: if flags ans cfAllowValueCombinations: split s into bytes, return ored
+        return self.get_dict()[s]
+        
     def get_dict(self):
         #TODO: do caching (with counter_attribute_changed checking for changes)
         cdef unsigned int size = 0
@@ -563,6 +601,7 @@ cdef class PropertyInt64(Property):
     cpdef set(self, int64_type value, int index = 0):
         obj_errcheck(OBJ_SetI64(self.obj, value, index))
 
+
 cdef class PropertyFloat(Property):
     cpdef double get(self, int index = 0):
         cdef double value
@@ -572,13 +611,17 @@ cdef class PropertyFloat(Property):
     cpdef set(self, double value, int index = 0):
         obj_errcheck(OBJ_SetF(self.obj, value, index))
 
+    cdef object string_to_value(self, bytes s):
+        return float(s)
+    #FIXME: sscanf with format????
+    
 cdef class PropertyPtr(Property):
     cpdef long int get(self, int index = 0):
         cdef void* value
         obj_errcheck(OBJ_GetP(self.obj, &value, index))
         return <long int>value
 
-    cpdef set(self, long int value, int index = 0): #TODO: PyCapsule?
+    cpdef set(self, long long int value, int index = 0): #TODO: PyCapsule?
         obj_errcheck(OBJ_SetP(self.obj, <void *>value, index))
 
 cdef class PropertyString(Property):
