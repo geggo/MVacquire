@@ -150,7 +150,16 @@ cdef class Device:
     def __getattr__(self, bytes name):
         return self.get_list(name)
 
-    def create_request_control(self, bytes name, bytes parent = <bytes>'Base'):
+    #def create_request_control(self, bytes name, bytes parent = <bytes>'Base'):
+    def create_request_control(self, bytes name, parent = 'Base'):
+        """
+        create a new request control object.
+        
+        Parameters
+        ----------
+        name : name of request control this one is derived from
+        :rtype: new request control (mv.List)
+        """
         cdef HLIST obj = 0
         dmr_errcheck(DMR_CreateRequestControl(self.drv, name, parent, &obj, NULL))
         return create_component(obj)
@@ -159,11 +168,16 @@ cdef class Device:
         dmr_errcheck(DMR_DeleteList(self.drv, name, dmltRequestCtrl))
 
     def image_request(self, int rc = 0):
-        """image_request(int rc = 0)
-        send an image request to the device driver.
+        """put an image request into image acquisition queue.
         
-        arguments:
-        rc: number of the request control to use for this request
+        Parameters
+        ----------
+        rc : int
+           number of the request control to use for this request
+
+        Returns
+        -------
+        number of request control object used
         """
         cdef int nr
         dmr_errcheck(DMR_ImageRequestSingle(self.drv, rc, &nr))
