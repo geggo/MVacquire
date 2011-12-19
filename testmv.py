@@ -53,6 +53,16 @@ del image_result
 #cleanup
 dev.delete_request_control('my request control')
 
+
+#call
+print "frame count before statistics reset: ", dev.Statistics.FrameCount
+#dev.Statistics.ResetStatistics()
+m = dev.Statistics.get_object_by_name('ResetStatistics@i')
+m()
+print "frame count after  statistics reset: ", dev.Statistics.FrameCount
+
+
+import pylab as plt
 plt.imshow(np.squeeze(img))
 plt.show()
 
