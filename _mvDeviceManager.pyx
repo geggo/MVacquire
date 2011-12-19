@@ -426,8 +426,13 @@ cdef class List(Component):
     def __getattr__(self, bytes name):
         try:
             return self[name]
-        except Exception, e:
+        except Exception, e: #FIXME
             raise AttributeError, e
+
+    def __setattr__(self, bytes name, value):
+        self[name].value = value
+        
+        
 
     property children:
         def __get__(self):

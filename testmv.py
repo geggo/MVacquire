@@ -1,5 +1,4 @@
 import numpy as np
-import pylab as plt
 
 print "pre import"
 import mv
@@ -26,6 +25,14 @@ cam_settings = settings.get_object_by_name('Camera')
 pf = cam_settings.PseudoFeatures
 for p in pf:
     print "%-25s: %s"%(p.name, p)
+
+print pf.Pseudo64BitIntProp
+pf.Pseudo64BitIntProp = 10
+print pf.Pseudo64BitIntProp
+
+print pf.PseudoIntVectorProp
+pf.PseudoIntVectorProp = 1,2,3
+print pf.PseudoIntVectorProp
 
 ## get image
 #create request control (optional)
