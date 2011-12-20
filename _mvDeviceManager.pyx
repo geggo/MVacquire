@@ -121,6 +121,9 @@ cdef class DeviceManager:
 #    print "(not) freeing image data"
 
 cdef class Device:
+    """image acquisition device
+    """
+
     cdef HDEV dev
     cdef HDRV drv
     cdef object __weakref__
@@ -157,14 +160,29 @@ cdef class Device:
         
         Parameters
         ----------
-        name : name of request control this one is derived from
-        :rtype: new request control (mv.List)
+        name : bytes
+            name of new request control
+        parent : bytes, optional
+            name of request control this one is derived from (default 'Base')
+
+        Returns
+        -------
+        rc : List
+            new request control (mv.List)
         """
         cdef HLIST obj = 0
         dmr_errcheck(DMR_CreateRequestControl(self.drv, name, parent, &obj, NULL))
         return create_component(obj)
     
     def delete_request_control(self, bytes name):
+        """
+        delete a request control object
+
+        Parameters
+        ----------
+        name : bytes
+            name of request control to be deleted
+        """
         dmr_errcheck(DMR_DeleteList(self.drv, name, dmltRequestCtrl))
 
     def image_request(self, int rc = 0):
@@ -177,33 +195,47 @@ cdef class Device:
 
         Returns
         -------
-        number of request control object used
+        nr : int
+           number of request control object used
         """
         cdef int nr
         dmr_errcheck(DMR_ImageRequestSingle(self.drv, rc, &nr))
         return nr
 
     def get_image(self, double timeout = 1.0):
+        """wait until image request result is available or timeout has elapsed
+
+        Note that to be sucessfull it is necessary to previously place
+        an imaqe request object into the request queue with `image_request`.
+
+        Parameters
+        ----------
+        timeout : maximum time in seconds to wait for image acquisition
+           
+        Returns
+        -------
+        result : ImageResult
+        
+        Raises
+        ------
+        MVTimeoutError
+            If the timeout elapsed
+        """
         cdef int nr
         cdef TDMR_ERROR err
         with nogil:
             err = DMR_ImageRequestWaitFor(self.drv, int(timeout*1000), 0, &nr)
-            #DEV_WAIT_FOR_REQUEST_FAILED 
         dmr_errcheck(err) #note: special exception for timeout (queue empty)
         res = ImageResult(self.drv, nr)
         assert res.result == rrOK and res.state == rsReady
         return res
         
-    def image_request_result(self, int nr):
-        cdef RequestResult result
-        dmr_errcheck(DMR_GetImageRequestResultEx(self.drv, nr, &result, sizeof(result), 0, 0))
-        #print self.Request[0].State, self.Request[0].Result #TODO
-        return result.result, result.state
-
     def image_request_reset(self, int rc=0):
         dmr_errcheck(DMR_ImageRequestReset(self.drv, rc, 0))
 
 cdef class ImageResult:
+    """Image acquisition result.
+    """
     cdef HDRV drv
     cdef int nr
     cdef object __weakref__
@@ -238,7 +270,18 @@ cdef class ImageResult:
         
 
     def get_buffer(self):
-        """Return image data as memory view"""
+        """Return image data as memory view
+        
+        The image data is copied and a memoryview to the image data is
+        returned.  The image buffer has shape (width, height,
+        number_components). Use e.g. numpy.asarray(buf) to create a
+        numpy array from the returned memoryview.
+
+        Returns
+        -------
+        buf : memoryview
+            image data
+        """
 
         #TODO: check if image request is valid (not unlocked)
         
@@ -330,6 +373,7 @@ cdef char* StringConstructionFunction(char* buf, size_t size):
     return <char*><void*> res
 
 cdef class Component:
+    """Entry in property tree, base class for List, Property, and Method objects"""
     cdef HOBJ obj
 
     def __cinit__(self, HOBJ obj):
@@ -412,6 +456,8 @@ cdef class Component:
 
 cdef class List(Component):
 
+    """List of Components"""
+
     def __getitem__(self, bytes key):
         cdef HOBJ obj = 0
         cdef int err = OBJ_GetHandleEx(self.obj, key, &obj, 0, 1) #only search in this list
@@ -467,6 +513,9 @@ cdef class Method(Component):
     property signature:
         def __get__(self):
             return self.get_string(sqMethParamString)
+
+    def __call__(self, *args):
+        print "calling Method not yet implemented"
 
 cdef class Property(Component):
     cdef unsigned int len(self):

@@ -2,7 +2,7 @@ API reference
 =============
 
 .. automodule:: mv
-   :members: DeviceManager, Device, ImageResult, List, Property
+   :members: DeviceManager, Device, ImageResult, Component, List, Property, Method
    :undoc-members:
 
 .. autoclass:: DeviceManager
