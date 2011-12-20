@@ -472,8 +472,13 @@ cdef class List(Component):
     def __getattr__(self, bytes name):
         try:
             return self[name]
-        except Exception, e:
+        except Exception, e: #FIXME
             raise AttributeError, e
+
+    def __setattr__(self, bytes name, value):
+        self[name].value = value
+        
+        
 
     property children:
         def __get__(self):
@@ -514,9 +519,18 @@ cdef class Method(Component):
         def __get__(self):
             return self.get_string(sqMethParamString)
 
-    def __call__(self, *args):
-        print "calling Method not yet implemented"
-
+    def __call__(self, *args, delim = '|'):
+        cdef int result
+        signature = self.signature
+        assert len(delim) == 1
+        assert len(args) == len(signature)-1
+        params = delim.join((str(a) for a in args))
+        obj_errcheck(OBJ_Execute(self.obj, params, delim, &result))
+        if signature[0] == 'i':
+            return result
+        else:
+            return None
+        
 cdef class Property(Component):
     cdef unsigned int len(self):
         cdef unsigned int count

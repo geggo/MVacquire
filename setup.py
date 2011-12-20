@@ -1,16 +1,24 @@
+import os, os.path
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
-
 #import numpy as np
+
+mvbase = os.path.normpath(os.getenv('MVIMPACT_ACQUIRE_DIR', 'matrix-vision'))
+if mvbase is None:
+    print "Warning! mvIMPACT Acquire base directory location unknown"
+    mvbase = 'matrix-vision'
+
+mvinclude = mvbase
+mvlib = os.path.join(mvbase, 'lib')
 
 ext_modules = [Extension("mv",
                         ["_mvDeviceManager.pyx"],
                         libraries = ["mvDeviceManager"],
-                        include_dirs = ["matrix-vision",
+                        include_dirs = [mvinclude,
                                         #np.get_include(),
                                         ],
-                        library_dirs = ["matrix-vision/lib"],)]
+                        library_dirs = [mvlib],)]
 for e in ext_modules:
     e.pyrex_directives = {"embedsignature": True}
 

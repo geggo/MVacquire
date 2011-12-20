@@ -1,5 +1,4 @@
 import numpy as np
-import pylab as plt
 
 print "pre import"
 import mv
@@ -27,6 +26,14 @@ pf = cam_settings.PseudoFeatures
 for p in pf:
     print "%-25s: %s"%(p.name, p)
 
+print pf.Pseudo64BitIntProp
+pf.Pseudo64BitIntProp = 10
+print pf.Pseudo64BitIntProp
+
+print pf.PseudoIntVectorProp
+pf.PseudoIntVectorProp = 1,2,3
+print pf.PseudoIntVectorProp
+
 ## get image
 #create request control (optional)
 rc  = dev.create_request_control('my request control')
@@ -53,6 +60,16 @@ del image_result
 #cleanup
 dev.delete_request_control('my request control')
 
+
+#call
+print "frame count before statistics reset: ", dev.Statistics.FrameCount
+#dev.Statistics.ResetStatistics()
+m = dev.Statistics.get_object_by_name('ResetStatistics@i')
+m()
+print "frame count after  statistics reset: ", dev.Statistics.FrameCount
+
+
+import pylab as plt
 plt.imshow(np.squeeze(img))
 plt.show()
 
