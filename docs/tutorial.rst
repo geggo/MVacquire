@@ -1,7 +1,10 @@
 Tutorial
 ========
 
-The mv extension is designed to provide a very pythonic interface, such that it can be easily used in an interactive environment like an IPython shell. 
+The mvacquire modul offers a simple interface for image acquisition
+with hardware from matrix-vision. It is designed to provide a very
+pythonic interface, such that it can be easily used in an interactive
+environment like an IPython shell.
 
 Initialization
 ~~~~~~~~~~~~~~
@@ -52,8 +55,8 @@ After an image has been acquired (or an timeout elapsed), the request
 object is moved to the 'result queue'. To get a
 :py:class:`~mv.ImageResult` object, use
 :py:meth:`~mv.Device.get_image`. This call blocks until a result is
-available, or raises an :py:exc:`~mv.MVTimeoutError` if a given timeout
-has elapsed without a result getting ready. 
+available, or raises an :py:exc:`~mv.MVTimeoutError` if a given
+timeout has elapsed without a result getting ready.
 
 To actually get the image data, use
 :py:meth:`~mv.ImageResult.get_buffer`. This returns a `memoryview`
@@ -74,8 +77,8 @@ by get_image if you are done. A minimal command sequence might would be:
    img = np.asarray(buf)
 
 
-Changing camera settings
-~~~~~~~~~~~~~~~~~~~~~~~~
+Accessing camera settings
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 *All* available settings (also called a :py:class:`~mv.Property`) are
 organized in a tree like structure. They are accessible as attributes
@@ -107,25 +110,92 @@ settings with `dir`
      'UserData']
 
 
-.. :note:
+.. note::
 
    The attributes belonging to camera settings can be distinguished
    from ordinary methods or properties by an initial capital letter.
 
-Accessing a setting as an attribute returns its value as Python int,
-long int, float, or bytes string, depending of the Property type.
+Each individual setting is either another list of settings
+(:py:class:`~mv.List`), a (subclass of) :py:class:`~mv.Property`, holding individual
+values, or a callable :py:class:`~mv.Method`.
 
-For changing the value of a setting use the
-:py:attr:`~mv.Property.value` attribute::
 
-   >>> testmv.dev.Setting.Base.Camera.Gain_dB.value = 10.0
-   >>> print testmv.dev.Setting.Base.Camera.Gain_dB
-   10.000 dB
+For accessing the value of a Property, use the
+:py:attr:`~mv.Property.value` property.
+
+.. note::
+
+   Note the difference between a Python property and a :py:class:`~mv.Property`!
+
+Depending on the Property type, the value is returned as Python
+int, long int, float, or bytes string. For vector Properties, i.e.,
+Properties that contain an array of values, a list of corresponding
+values is returned.
+
+.. sourcecode:: ipython
+
+    In [7]: pf.Pseudo64BitIntProp.value
+    Out[7]: 10L
+    In [8]: pf.PseudoInt64VectorProp.value
+    Out[8]: [-9223372036854775808L, 0L, 9223372036854775807L]
+
+For convenience a direct access to the Property value (without using
+the :py:attr:`~mv.Property.value` property) is also possible. (In case
+of read access to Properties, the `__str__` and `__repr__` methods are
+implicitly called, returning the values formatted as strings).
+
+.. sourcecode:: ipython
+
+    In [17]: dev.Setting.Base.Camera.Gain_dB = 10
+
+    In [18]: dev.Setting.Base.Camera.Gain_dB
+    Out[18]: 10.0
+
+    In [19]: print dev.Setting.Base.Camera.Gain_dB
+    10.000 dB
+
 
 Setting a Property value with a string argument is also possible, this
-is especially useful for named integer properties.::
+is especially useful for named integer properties.
 
-   >>> dev.Setting.Base.Camera.TestMode.value = 'MovingMonoRamp'
-   >>> print dev.Setting.Base.Camera.TestMode
+.. sourcecode:: ipython
+
+   In [29]: dev.Setting.Base.Camera.TestMode = 'MovingMonoRamp'
+
+   In [30]: print dev.Setting.Base.Camera.TestMode
    MovingMonoRamp
+
+For named integer properties, the translation dictionary is available
+with the :py:meth:`~mv.PropertyInt.get_dict` method.
+
+.. sourcecode:: ipython
+
+   In [31]: dev.Setting.Base.Camera.TestMode.get_dict()
+   Out[31]:
+   {'BayerWhiteBalanceTestImage': 11,
+    'EmptyMonoBuffer': 23,
+    'HorizontalMono12Packed_V2Ramp': 18,
+    'HorizontalMonoRamp': 15,
+    'ImageDirectory': 12,
+    'LeakyPixelTestImageMono8Bayer': 13,
+    'MovingBGR888PackedImage': 19,
+    'MovingBGRPacked_V2Ramp': 22,
+    'MovingBayerDataRamp': 10,
+    'MovingMonoRamp': 3,
+    'MovingRGB101010PackedImage': 6,
+    'MovingRGB121212PackedImage': 7,
+    'MovingRGB141414PackedImage': 8,
+    'MovingRGB161616PackedImage': 9,
+    'MovingRGB888PackedImage': 1,
+    'MovingRGBx888PackedImage': 0,
+    'MovingRGBx888PlanarImage': 2,
+    'MovingVerticalMonoRamp': 17,
+    'MovingYUV422PackedRamp': 4,
+    'MovingYUV422PlanarRamp': 5,
+    'MovingYUV422_UYVYPackedRamp': 14,
+    'MovingYUV444PackedRamp': 20,
+    'MovingYUV444_UYVPackedRamp': 21,
+    'VerticalMonoRamp': 16}
+
+
 
