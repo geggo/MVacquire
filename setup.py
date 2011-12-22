@@ -1,4 +1,4 @@
-import os, os.path
+import os, os.path, platform
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
@@ -11,6 +11,9 @@ if mvbase is None:
 
 mvinclude = mvbase
 mvlib = os.path.join(mvbase, 'lib')
+bits,foo = platform.architecture()
+if bits == '64bit':
+    mvlib = os.path.join(mvlib, r'win\x64')
 
 ext_modules = [Extension("mv",
                         ["_mvDeviceManager.pyx"],
