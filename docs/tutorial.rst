@@ -76,6 +76,15 @@ by get_image if you are done. A minimal command sequence might would be:
 
    img = np.asarray(buf)
 
+For convenience, the above command sequence is also available as
+:py:meth:`~mv.Device.snapshot()`. The easiest way to display an image
+is therefore::
+
+   imshow(dev.snapshot())
+
+(try this with an ipython shell, e.g. ``ipython pylab`` or ``ipython
+qtconsole --pylab=inline``.
+
 
 Accessing camera settings
 ~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -233,6 +233,12 @@ cdef class Device:
     def image_request_reset(self, int rc=0):
         dmr_errcheck(DMR_ImageRequestReset(self.drv, rc, 0))
 
+    def snapshot(self):
+        self.image_request()
+        result = self.get_image()
+        return result.get_buffer()
+        
+
 cdef class ImageResult:
     """Image acquisition result.
     """
@@ -273,9 +279,10 @@ cdef class ImageResult:
         """Return image data as memory view
         
         The image data is copied and a memoryview to the image data is
-        returned.  The image buffer has shape (width, height,
-        number_components). Use e.g. numpy.asarray(buf) to create a
-        numpy array from the returned memoryview.
+        returned.  The image buffer has shape (height, width) for a
+        mono image or (height, width, num_channels). Use
+        e.g. numpy.asarray(buf) to create a numpy array from the
+        returned memoryview.
 
         Returns
         -------
@@ -293,6 +300,11 @@ cdef class ImageResult:
         cdef int bytesperpixel = buf.iBytesPerPixel
         cdef int c = buf.iChannelCount
         cdef cython.array img
+
+        if c>1:
+            shp = (h,w,c)
+        else:
+            shp = (h,w)
                 
         if buf.pixelFormat in [ibpfMono8, 
                                #ibpfRGBx888Packed,
@@ -300,7 +312,7 @@ cdef class ImageResult:
                                ibpfRGB888Packed,
                                ]:
             
-            img = cython.array( shape = (h,w,c), 
+            img = cython.array( shape = shp,
                                 itemsize = bytesperpixel,
                                 format = 'B', #H for uint16, 
                                 mode = 'c', 
