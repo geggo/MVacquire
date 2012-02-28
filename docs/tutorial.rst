@@ -58,6 +58,10 @@ object is moved to the 'result queue'. To get a
 available, or raises an :py:exc:`~mv.MVTimeoutError` if a given
 timeout has elapsed without a result getting ready.
 
+More information about the captured image (e.g. timestamp) is returned
+by the :py:attr:`~mv.ImageResult.info` property of the
+:py:class:`~mv.ImageResult` object as a python dict.
+
 To actually get the image data, use
 :py:meth:`~mv.ImageResult.get_buffer`. This returns a `memoryview`
 object to a copy of the image data. From this you can obtain a `numpy`

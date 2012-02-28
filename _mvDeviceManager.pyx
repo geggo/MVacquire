@@ -236,8 +236,9 @@ cdef class Device:
     def snapshot(self):
         self.image_request()
         result = self.get_image()
-        return result.get_buffer()
-        
+        img = result.get_buffer()
+        del result
+        return img
 
 cdef class ImageResult:
     """Image acquisition result.
@@ -260,6 +261,16 @@ cdef class ImageResult:
         cdef RequestResult result
         dmr_errcheck(DMR_GetImageRequestResultEx(self.drv, self.nr, &result, sizeof(result), 0, 0))
         return result
+
+    cdef RequestInfo get_info(self):
+        cdef RequestInfo info
+        dmr_errcheck(DMR_GetImageRequestInfoEx(self.drv, self.nr, &info, sizeof(info), 0, 0))
+        return info
+
+    property info:
+        def __get__(self):
+            cdef RequestInfo info = self.get_info()
+            return info
 
     property result:
         def __get__(self):

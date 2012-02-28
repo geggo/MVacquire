@@ -48,6 +48,9 @@ image_result = dev.get_image(timeout = 1.0)
 #requ_res, requ_state = dev.image_request_result(nr)
 print image_result.result, image_result.state
 
+print image_result.info
+
+
 #test for validity
 #if requ_res:
 
