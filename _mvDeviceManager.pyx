@@ -6,7 +6,7 @@ from cython.view cimport array as cvarray
 import weakref
 from libc.string cimport memcpy
 
-cpdef int visibility_level = cvExpert
+cpdef int visibility_level = cvGuru #TODO: allow changing this variable
 
 class MVError(RuntimeError):
     def __init__(self, msg = ''):
@@ -61,7 +61,7 @@ cdef class DeviceManager:
         cdef size_t ssize = 0
         cdef HDEV hdev
         for i in range(self.device_count):
-            dmr_errcheck(DMR_GetDevice(&hdev, <TDMR_DeviceSearchMode>0, '', i, '*'))
+            dmr_errcheck(DMR_GetDevice(&hdev, dmdsmSerial, '*', i, '*'))
             dmr_errcheck(DMR_GetDeviceInfoEx(hdev, dmditDeviceInfoStructure, &device_info, &ssize))
             device_list.append(device_info)
         return device_list            
