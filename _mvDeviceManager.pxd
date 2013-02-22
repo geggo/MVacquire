@@ -94,6 +94,11 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
         sqMethParamString
         sqObjDisplayName
 
+    cdef enum TDMR_DeviceInfoType:
+        dmditDeviceInfoStructure
+        dmditDeviceIsInUse
+        dmdithDeviceDriver
+
     cdef struct TDMR_DeviceInfo:
         char serial[38]
         char family[38]
@@ -137,7 +142,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TDMR_ERROR DMR_Close()
 
-    TDMR_ERROR DMR_GetDevice(HDEV *pHDev, TDMR_DeviceSearchMode searchMode, char *pSearchString, unsigned int devNr, char wildcard)
+    TDMR_ERROR DMR_GetDevice(HDEV *pHDev, TDMR_DeviceSearchMode searchMode, const char *pSearchString, unsigned int devNr, char wildcard)
 
     TDMR_ERROR DMR_GetDeviceCount(unsigned int *pDevCnt)
 
@@ -147,17 +152,19 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TDMR_ERROR DMR_GetDeviceInfo(unsigned int devNr, TDMR_DeviceInfo *pInfo, size_t infoSize)
 
+    TDMR_ERROR DMR_GetDeviceInfoEx(HDEV hDev, TDMR_DeviceInfoType infoType, void* pInfo, size_t* pInfoSize)
+
     TDMR_ERROR DMR_GetDriverHandle(HDEV hDev, HDRV *pHDrv)
 
     TDMR_ERROR DMR_UpdateDeviceList(unsigned int reserved, int reserved2)
 
-    TDMR_ERROR DMR_CreateSetting(HDRV hDrv, char *pName, char *pParentName, HLIST *pNewID)
+    TDMR_ERROR DMR_CreateSetting(HDRV hDrv, const char *pName, const char *pParentName, HLIST *pNewID)
 
-    TDMR_ERROR DMR_CreateRequestControl(HDRV hDrv, char *pName, char *pParentName, HLIST *pNewID, int *pRequestCtrl)
+    TDMR_ERROR DMR_CreateRequestControl(HDRV hDrv, const char *pName, const char *pParentName, HLIST *pNewID, int *pRequestCtrl)
 
-    TDMR_ERROR DMR_DeleteList(HDRV hDrv, char *pName, TDMR_ListType type)
+    TDMR_ERROR DMR_DeleteList(HDRV hDrv, const char *pName, TDMR_ListType type)
 
-    TDMR_ERROR DMR_FindList(HDRV hDrv, char *pName, TDMR_ListType type, unsigned int flags, HLIST *phDevList)
+    TDMR_ERROR DMR_FindList(HDRV hDrv, const char *pName, TDMR_ListType type, unsigned int flags, HLIST *phDevList)
 
     TDMR_ERROR DMR_AcquisitionStart(HDRV hDrv)
 
@@ -193,9 +200,9 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TDMR_ERROR DMR_SaveRTCtrProgram(HDRV hDrv, HLIST hRTCtrList)
 
-    TDMR_ERROR DMR_LoadSetting(HDRV hDrv, char *pName, TStorageFlag storageflags, TScope scope)
+    TDMR_ERROR DMR_LoadSetting(HDRV hDrv, const char *pName, TStorageFlag storageflags, TScope scope)
 
-    TDMR_ERROR DMR_SaveSetting(HDRV hDrv, char *pName, TStorageFlag storageflags, TScope scope)
+    TDMR_ERROR DMR_SaveSetting(HDRV hDrv, const char *pName, TStorageFlag storageflags, TScope scope)
 
     TDMR_ERROR DMR_LoadSettingFromDefault(HDRV hDrv, TScope scope)
 
@@ -207,7 +214,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TDMR_ERROR DMR_ImportCameraDescription(HDRV hDrv, HLIST hCameraDescList)
 
-    TDMR_ERROR DMR_CopyCameraDescription(HDRV hDrv, HLIST hCameraDescList, char *pNewName)
+    TDMR_ERROR DMR_CopyCameraDescription(HDRV hDrv, HLIST hCameraDescList, const char *pNewName)
 
     TDMR_ERROR DMR_SetDeviceID(HDEV hDev, int newID)
 
@@ -215,7 +222,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TDMR_ERROR DMR_UpdateDigitalInputs(HDRV hDrv)
 
-    TDMR_ERROR DMR_UpgradeDeviceFeatures(HDEV hDev, char *pLicenceFilename, int reserved, int reserved2)
+    TDMR_ERROR DMR_UpgradeDeviceFeatures(HDEV hDev, const char *pLicenceFilename, int reserved, int reserved2)
 
     TDMR_ERROR DMR_CreateUserDataEntry(HDEV hDev, HLIST *pEntry)
 
@@ -231,19 +238,19 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TDMR_ERROR DMR_ReleaseImageRequestBufferDesc(ImageBuffer **ppBuffer)
 
-    TDMR_ERROR DMR_CopyImageRequestBufferDesc(ImageBuffer *pSrc, ImageBuffer **ppDst, int flags)
+    TDMR_ERROR DMR_CopyImageRequestBufferDesc(const ImageBuffer *pSrc, ImageBuffer **ppDst, int flags)
 
     TDMR_ERROR DMR_AllocImageBuffer(ImageBuffer **ppBuffer, TImageBufferPixelFormat pixelFormat, int width, int height)
 
     TDMR_ERROR DMR_ReleaseImageBuffer(ImageBuffer **ppBuffer)
 
-    TDMR_ERROR DMR_CopyImageBuffer(ImageBuffer *pSrc, ImageBuffer **ppDst, int flags)
+    TDMR_ERROR DMR_CopyImageBuffer(const ImageBuffer *pSrc, ImageBuffer **ppDst, int flags)
 
-    char *DMR_ErrorCodeToString(int errorCode)
+    const char *DMR_ErrorCodeToString(int errorCode)
 
-    TPROPHANDLING_ERROR OBJ_IsSettingAvailable(char *pName, TStorageFlag storageflags, TScope scope)
+    TPROPHANDLING_ERROR OBJ_IsSettingAvailable(const char *pName, TStorageFlag storageflags, TScope scope)
 
-    TPROPHANDLING_ERROR OBJ_DeleteSetting(char *pName, TStorageFlag storageflags, TScope scope)
+    TPROPHANDLING_ERROR OBJ_DeleteSetting(const char *pName, TStorageFlag storageflags, TScope scope)
 
     TPROPHANDLING_ERROR OBJ_CheckHandle(HOBJ hObj, TOBJ_HandleCheckMode mode)
 
@@ -257,7 +264,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TPROPHANDLING_ERROR OBJ_GetFlags(HOBJ hObj, TComponentFlag *pFlags)
 
-    TPROPHANDLING_ERROR OBJ_GetFlagsS(HOBJ hObj, char *pSeparator, char *pBuf, size_t bufSize)
+    TPROPHANDLING_ERROR OBJ_GetFlagsS(HOBJ hObj, const char *pSeparator, char *pBuf, size_t bufSize)
 
     TPROPHANDLING_ERROR OBJ_GetName(HOBJ hObj, char *pBuf, size_t bufSize)
 
@@ -277,7 +284,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TPROPHANDLING_ERROR OBJ_RestoreDefault(HOBJ hObj)
 
-    TPROPHANDLING_ERROR OBJ_GetHandle(HLIST hList, char *pPathAndObjName, HOBJ *phObj)
+    TPROPHANDLING_ERROR OBJ_GetHandle(HLIST hList, const char *pPathAndObjName, HOBJ *phObj)
 
     TPROPHANDLING_ERROR OBJ_GetSelectedFeatures(HOBJ hObj, int index, HOBJ *pFeatures, size_t *pFeatureCount)
 
@@ -311,7 +318,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TPROPHANDLING_ERROR OBJ_GetBinary(HOBJ hProp, char *pBuf, unsigned int bufSize, int index)
 
-    TPROPHANDLING_ERROR OBJ_SetBinary(HOBJ hProp, char *pBuf, unsigned int bufSize, int index)
+    TPROPHANDLING_ERROR OBJ_SetBinary(HOBJ hProp, const char *pBuf, unsigned int bufSize, int index)
 
     TPROPHANDLING_ERROR OBJ_GetBinaryBufferSize(HOBJ hProp, unsigned int *pBufSize, int index)
 
@@ -323,7 +330,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TPROPHANDLING_ERROR OBJ_SetF(HOBJ hProp, double val, int index)
 
-    TPROPHANDLING_ERROR OBJ_SetFArray(HOBJ hProp, double *pVal, unsigned int valCount, int index)
+    TPROPHANDLING_ERROR OBJ_SetFArray(HOBJ hProp, const double *pVal, unsigned int valCount, int index)
 
     TPROPHANDLING_ERROR OBJ_GetFDictEntry(HOBJ hProp, char *pTranslationString, size_t translationStringBufSize, double *pValue, int index)
 
@@ -335,7 +342,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TPROPHANDLING_ERROR OBJ_SetI(HOBJ hProp, int val, int index)
 
-    TPROPHANDLING_ERROR OBJ_SetIArray(HOBJ hProp, int *pVal, unsigned int valCount, int index)
+    TPROPHANDLING_ERROR OBJ_SetIArray(HOBJ hProp, const int *pVal, unsigned int valCount, int index)
 
     TPROPHANDLING_ERROR OBJ_GetIDictEntry(HOBJ hProp, char *pTranslationString, size_t translationStringBufSize, int *pValue, int index)
 
@@ -347,7 +354,7 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TPROPHANDLING_ERROR OBJ_SetI64(HOBJ hProp, int64_type val, int index)
 
-    TPROPHANDLING_ERROR OBJ_SetI64Array(HOBJ hProp, int64_type *pVal, unsigned int valCount, int index)
+    TPROPHANDLING_ERROR OBJ_SetI64Array(HOBJ hProp, const int64_type *pVal, unsigned int valCount, int index)
 
     TPROPHANDLING_ERROR OBJ_GetI64DictEntry(HOBJ hProp, char *pTranslationString, size_t translationStringBufSize, int64_type *pValue, int index)
 
@@ -359,11 +366,11 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TPROPHANDLING_ERROR OBJ_GetS(HOBJ hProp, char *pVal, size_t bufSize, int index)
 
-    TPROPHANDLING_ERROR OBJ_SetS(HOBJ hProp, char *pVal, int index)
+    TPROPHANDLING_ERROR OBJ_SetS(HOBJ hProp, const char *pVal, int index)
 
-    TPROPHANDLING_ERROR OBJ_GetSFormattedEx(HOBJ hProp, char *pBuf, size_t *pBufSize, char *pFormat, int index)
+    TPROPHANDLING_ERROR OBJ_GetSFormattedEx(HOBJ hProp, char *pBuf, size_t *pBufSize, const char *pFormat, int index)
 
-    TPROPHANDLING_ERROR OBJ_GetSArrayFormattedEx(HOBJ hProp, char *pBuf, size_t *pBufSize, char *pFormat, char *pDelimiters, int startIndex, int endIndex, int mode)
+    TPROPHANDLING_ERROR OBJ_GetSArrayFormattedEx(HOBJ hProp, char *pBuf, size_t *pBufSize, const char *pFormat, const char *pDelimiters, int startIndex, int endIndex, int mode)
 
     TPROPHANDLING_ERROR OBJ_RemoveVal(HOBJ hProp, int index)
 
@@ -375,13 +382,13 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
 
     TPROPHANDLING_ERROR OBJ_GetElementCount(HLIST hList, unsigned int *pElementCount)
 
-    TPROPHANDLING_ERROR OBJ_Execute(HOBJ hMeth, char *pCallParams, char *pDelimiters, int *pResult)
+    TPROPHANDLING_ERROR OBJ_Execute(HOBJ hMeth, const char *pCallParams, const char *pDelimiters, int *pResult)
 
     TPROPHANDLING_ERROR OBJ_GetSParamList(HOBJ hMeth, char *pBuf, size_t bufSize)
 
-    TPROPHANDLING_ERROR OBJ_GetHandleEx(HLIST hList, char *pObjName, HOBJ *phObj, unsigned int searchmode, int maxSearchDepth)
+    TPROPHANDLING_ERROR OBJ_GetHandleEx(HLIST hList, const char *pObjName, HOBJ *phObj, unsigned int searchmode, int maxSearchDepth)
 
-    ctypedef char * (*SCF)(char *, size_t) #FIXME: should be ...(const char*, size_t)
+    ctypedef char * (*SCF)(const char *, size_t) #FIXME: should be ...(const char*, size_t)
 
     TPROPHANDLING_ERROR OBJ_GetSWithInplaceConstruction(HOBJ hObj, TOBJ_StringQuery sq, char **pResult, SCF constructionFunc, int mode, int reserved)
 

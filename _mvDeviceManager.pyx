@@ -2,7 +2,7 @@
 from _mvDeviceManager cimport *
 from libc.stdlib cimport malloc, free
 from cpython.ref cimport Py_INCREF, Py_DECREF
-import cython
+from cython.view cimport array as cvarray
 import weakref
 from libc.string cimport memcpy
 
@@ -58,12 +58,11 @@ cdef class DeviceManager:
         device_list = []
         cdef TDMR_DeviceInfo device_info
         cdef int i
+        cdef size_t ssize = 0
+        cdef HDEV hdev
         for i in range(self.device_count):
-            dmr_errcheck(DMR_GetDeviceInfo(i, &device_info, sizeof(device_info)))
-            #device_list.append( dict(deviceId = device_info.deviceId,
-            #                         family = device_info.family,
-            #                         product = device_info.product,
-            #                         serial = device_info.serial) )
+            dmr_errcheck(DMR_GetDevice(&hdev, <TDMR_DeviceSearchMode>0, '', i, '*'))
+            dmr_errcheck(DMR_GetDeviceInfoEx(hdev, dmditDeviceInfoStructure, &device_info, &ssize))
             device_list.append(device_info)
         return device_list            
 
@@ -227,7 +226,8 @@ cdef class Device:
             err = DMR_ImageRequestWaitFor(self.drv, int(timeout*1000), 0, &nr)
         dmr_errcheck(err) #note: special exception for timeout (queue empty)
         res = ImageResult(self.drv, nr)
-        assert res.result == rrOK and res.state == rsReady
+        assert res.result == rrOK, "image request #%d, result=%d is not rrOK"%(nr, res.result)
+        assert res.state == rsReady, "image request#%d state=%d is not rsReady"%(nr, res.state)
         return res
         
     def image_request_reset(self, int rc=0):
@@ -235,10 +235,14 @@ cdef class Device:
 
     def snapshot(self):
         self.image_request()
-        result = self.get_image()
-        img = result.get_buffer()
-        del result
-        return img
+        try:
+            result = self.get_image()
+        except Exception as e:
+            print "error getting image (ignored):", e
+        else:
+            img = result.get_buffer()
+            del result
+            return img
 
 cdef class ImageResult:
     """Image acquisition result.
@@ -310,7 +314,7 @@ cdef class ImageResult:
         cdef int h = buf.iHeight
         cdef int bytesperpixel = buf.iBytesPerPixel
         cdef int c = buf.iChannelCount
-        cdef cython.array img
+        cdef cvarray img
 
         if c>1:
             shp = (h,w,c)
@@ -323,11 +327,11 @@ cdef class ImageResult:
                                ibpfRGB888Packed,
                                ]:
             
-            img = cython.array( shape = shp,
-                                itemsize = bytesperpixel,
-                                format = 'B', #H for uint16, 
-                                mode = 'c', 
-                                allocate_buffer=True) #allocate memory
+            img = cvarray( shape = shp,
+                           itemsize = bytesperpixel,
+                           format = 'B', #H for uint16, 
+                           mode = 'c', 
+                           allocate_buffer=True) #allocate memory
             memcpy(img.data, buf.vpData, w*h*c*bytesperpixel)
         else:
             img= None
@@ -633,9 +637,24 @@ cdef class Property(Component):
         obj_errcheck(err)
         return s
 
+    property max:
+        def __get__(self):
+            cdef unsigned int available = 0 
+            obj_errcheck(OBJ_IsConstantDefined(self.obj, PROP_MAX_VAL, &available))
+            if available:
+                return self.get(PROP_MAX_VAL)
+
+    property min:
+        def __get__(self):
+            cdef unsigned int available = 0 
+            obj_errcheck(OBJ_IsConstantDefined(self.obj, PROP_MIN_VAL, &available))
+            if available:
+                return self.get(PROP_MIN_VAL)
+
+
     #def readS(self, int index=0):
     #    cdef size_t bufsize = 32
-    #    cdef cython.array buf = cython.array(shape=(bufsize,), itemsize=sizeof(char))
+    #    cdef cvarray buf = cvarray(shape=(bufsize,), itemsize=sizeof(char))
     #    #cdef char[:] cbuf = buf
     #    err = OBJ_GetSFormattedEx(self.obj, buf.data, &bufsize, NULL, 0)
     #    if err == PROPHANDLING_INPUT_BUFFER_TOO_SMALL:
