@@ -248,31 +248,36 @@ cdef class ImageResult:
     """Image acquisition result.
     """
     cdef HDRV drv
-    cdef int nr
+    cdef int _nr
     cdef object __weakref__
     
     def __cinit__(self, HDRV drv, int nr):
         self.drv = drv
-        self.nr = nr
+        self._nr = nr
         
     def __dealloc__(self):
         self.unlock()
 
     cdef unlock(self):
-        dmr_errcheck(DMR_ImageRequestUnlock(self.drv, self.nr))
+        dmr_errcheck(DMR_ImageRequestUnlock(self.drv, self._nr))
         
     cdef RequestResult get_result(self):
         cdef RequestResult result
-        dmr_errcheck(DMR_GetImageRequestResultEx(self.drv, self.nr, &result, sizeof(result), 0, 0))
+        dmr_errcheck(DMR_GetImageRequestResultEx(self.drv, self._nr, &result, sizeof(result), 0, 0))
         return result
 
     cdef RequestInfo get_info(self):
         cdef RequestInfo info
-        dmr_errcheck(DMR_GetImageRequestInfoEx(self.drv, self.nr, &info, sizeof(info), 0, 0))
+        dmr_errcheck(DMR_GetImageRequestInfoEx(self.drv, self._nr, &info, sizeof(info), 0, 0))
         return info
 
+    property nr:
+        def __get__(self):
+            return self._nr
+    
     property info:
         def __get__(self):
+            """image request number"""
             cdef RequestInfo info = self.get_info()
             return info
 
@@ -308,7 +313,7 @@ cdef class ImageResult:
         #TODO: check if image request is valid (not unlocked)
         
         cdef ImageBuffer* buf = NULL
-        dmr_errcheck(DMR_GetImageRequestBuffer(self.drv, self.nr, &buf))
+        dmr_errcheck(DMR_GetImageRequestBuffer(self.drv, self._nr, &buf))
         
         cdef int w = buf.iWidth
         cdef int h = buf.iHeight
