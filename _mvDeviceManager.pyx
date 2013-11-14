@@ -72,6 +72,22 @@ cdef class DeviceManager:
         return Device(hdev)
 
     def get_device(self, bytes serial, int nr = 0):
+        """
+        get device by serial name
+        
+        Parameters
+        ----------
+
+        serial : bytes
+            device serial name
+
+        Returns
+        -------
+        dev : Device
+            
+        note: list of opened devices is cached
+
+        """
         #FIXME: create unique handle
         device = self.devices.get(serial)
         if device is None:
