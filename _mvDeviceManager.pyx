@@ -333,38 +333,59 @@ cdef class ImageResult:
         
         cdef int w = buf.iWidth
         cdef int h = buf.iHeight
-        cdef int bytesperpixel = buf.iBytesPerPixel
+        cdef int bytesperpixel = buf.iBytesPerPixel #all components
         cdef int c = buf.iChannelCount
         cdef cvarray img
 
-        if c>1:
-            shp = (h,w,c)
-        else:
-            shp = (h,w)
-
         #print "buffer %d x %d (%d channels), %d bytes"%(w, h, c, bytesperpixel)
-                
-        if buf.pixelFormat in [ibpfMono8, 
-                               #ibpfRGBx888Packed,
-                               #ibpfRGBx888Planar,
-                               #ibpfRGB888Packed,
-                               ]:
+            
+        cdef int itemsize = 1
+        cdef format = 'B'
+
+        #ibpfRGBx888Planar,
+        format_dict = {
+            ibpfMono8: 'B',
+            ibpfMono12: 'H',
+            ibpfMono14: 'H',
+            ibpfMono16: 'H', 
+            ibpfMono32: 'I',
+            ibpfRGB888Packed: 'BBB',
+            ibpfRGB101010Packed: 'HHH',
+            ibpfRGB121212Packed: 'HHH',
+            ibpfRGB141414Packed: 'HHH',
+            ibpfRGB161616Packed: 'HHH',
+            ibpfRGBx888Packed: 'BBBB',
+            ibpfBGR888Packed: 'BBB',
+            ibpfYUV444Packed: 'BBB',
+            }
+        format = format_dict.get(buf.pixelFormat, 
+                                 None) #'B'*bytesperpixel)
+        img = None
+        if format is not None:
+            itemsize = bytesperpixel
+            shp = (h,w)
             
             img = cvarray( shape = shp,
-                           itemsize = bytesperpixel,
-                           format = 'B', #H for uint16, 
-                           mode = 'c', 
-                           allocate_buffer=True) #allocate memory
-            memcpy(img.data, buf.vpData, w*h*c*bytesperpixel)
+                       itemsize = bytesperpixel,
+                       format = format, #H for uint16, 
+                       mode = 'c', 
+                       allocate_buffer=True)
+
+        elif buf.pixelFormat in (ibpfRGBx888Planar,
+                                 ibpfYUV444Planar):
+            img = cvarray( shape = (bytesperpixel, h, w),
+                       itemsize = 1,
+                       format = 'B',
+                       mode = 'c', 
+                       allocate_buffer=True)
+            memcpy(img.data, buf.vpData, w*h*bytesperpixel) #TODO: without copy?
         else:
-            img= None
+            img = None
         
         dmr_errcheck(DMR_ReleaseImageRequestBufferDesc(&buf))
         if img is None:
             raise MVError, 'image pixel format not supported'
         return img.memview
-        #cdef unsigned char[:,:,:] memview = img
-        #return memview # img
     
     
 cdef dict lists = {

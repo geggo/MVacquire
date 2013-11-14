@@ -1,12 +1,17 @@
 import mv
 import numpy as  np
-import pylab as plt
+#import pylab as plt
 
 cam = mv.dmg.VD000001
 cam_settings = cam.Setting.Base.Camera
 
 cam_settings.TestMode = 'HorizontalMonoRamp'
-cam.Setting.Base.ImageDestination.PixelFormat = 'Mono8'#, #'RGB888Packed'
+cam_settings.TestImageBarWidth = 1
+cam_settings.ChannelBitDepth = 16
+
+
+#'Mono8': ok
+#'RGB888Packed'
 
 # 'Auto'
 # 'BGR101010Packed_V2'
@@ -35,17 +40,30 @@ cam.Setting.Base.ImageDestination.PixelFormat = 'Mono8'#, #'RGB888Packed'
 # 'YUV444_UYVPacked'
 # 'YUV444_UYV_10Packed'
 
+pixel_formats = ('Mono8', 'Mono10', 'Mono12', 'Mono16',
+                 'RGB888Packed', 'RGB101010Packed', 'RGB121212Packed', 'RGB141414Packed', 'RGB161616Packed',
+                 'RGBx888Packed',
+                 'BGR888Packed',
+                 'RGBx888Planar')
 
-nr = cam.image_request()
-result = cam.get_image(timeout = 1.0)
+for pixfmt in pixel_formats:
+    cam.Setting.Base.ImageDestination.PixelFormat = pixfmt
 
-print "result:"
-print result.result, result.state, result.info
+    nr = cam.image_request()
+    result = cam.get_image(timeout = 1.0)
+    #print "result:"
+    #print result.result, result.state, result.info
+    print pixfmt
+    try:
+        buf = result.get_buffer()
+        print "buffer:", buf.shape
+        img = np.asarray(buf)
+        print img.shape, img.dtype
+        print img[...,0, :6]
+    except mv.MVError as e:
+        print "Error getting buffer:", e
+    print
 
-buf = result.get_buffer()
-print "buffer:", buf.shape
-img = np.asarray(buf)
-
-
-plt.imshow(np.squeeze(img))
-plt.show()
+#
+#plt.imshow(np.squeeze(img))
+#plt.show()
