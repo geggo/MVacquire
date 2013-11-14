@@ -341,11 +341,13 @@ cdef class ImageResult:
             shp = (h,w,c)
         else:
             shp = (h,w)
+
+        #print "buffer %d x %d (%d channels), %d bytes"%(w, h, c, bytesperpixel)
                 
         if buf.pixelFormat in [ibpfMono8, 
                                #ibpfRGBx888Packed,
                                #ibpfRGBx888Planar,
-                               ibpfRGB888Packed,
+                               #ibpfRGB888Packed,
                                ]:
             
             img = cvarray( shape = shp,
@@ -358,6 +360,8 @@ cdef class ImageResult:
             img= None
         
         dmr_errcheck(DMR_ReleaseImageRequestBufferDesc(&buf))
+        if img is None:
+            raise MVError, 'image pixel format not supported'
         return img.memview
         #cdef unsigned char[:,:,:] memview = img
         #return memview # img
