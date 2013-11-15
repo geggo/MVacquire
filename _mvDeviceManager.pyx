@@ -315,10 +315,14 @@ cdef class ImageResult:
         """Return image data as memory view
         
         The image data is copied and a memoryview to the image data is
-        returned.  The image buffer has shape (height, width) for a
-        mono image or (height, width, num_channels). Use
-        e.g. numpy.asarray(buf) to create a numpy array from the
-        returned memoryview.
+        returned.  Use e.g. numpy.asarray(buf) to create a numpy array
+        from the returned memoryview. The shape and dtype of the array
+        depends on the pixel format. For monochromatic formats an
+        array of shape (height, width) of dtype np.uint8 or np.uint16
+        is returned, for packed color images an array also with shape
+        (height, width) and a custom dtype consisting of 3 or 4
+        np.uint8 or np.uint16. Planar color images have shape (3,
+        height, width).
 
         Returns
         -------
