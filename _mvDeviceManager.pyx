@@ -349,6 +349,7 @@ cdef class ImageResult:
         #ibpfRGBx888Planar,
         format_dict = {
             ibpfMono8: 'B',
+            ibpfMono10: 'H',
             ibpfMono12: 'H',
             ibpfMono14: 'H',
             ibpfMono16: 'H', 
@@ -374,6 +375,7 @@ cdef class ImageResult:
                        format = format, #H for uint16, 
                        mode = 'c', 
                        allocate_buffer=True)
+            memcpy(img.data, buf.vpData, w*h*bytesperpixel)
 
         elif buf.pixelFormat in (ibpfRGBx888Planar,
                                  ibpfYUV444Planar):
