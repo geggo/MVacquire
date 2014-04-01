@@ -40,7 +40,12 @@ scope.
    In [23]: del dev
    close device 0x30001 0xac0000
 
-More detailed information about the available devices is returned by :py:meth:`DeviceManager.get_device_list`.
+More detailed information about the available devices is returned by
+:py:meth:`DeviceManager.get_device_list`. 
+
+If a device has been connected after initialization of
+:py:class:`mv.DeviceManager`, call
+:py:meth:`DeviceManager.get_device_list` to update the device list. 
 
 
 Getting an image

@@ -64,7 +64,18 @@ cdef class DeviceManager:
             dmr_errcheck(DMR_GetDevice(&hdev, dmdsmSerial, '*', i, '*'))
             dmr_errcheck(DMR_GetDeviceInfoEx(hdev, dmditDeviceInfoStructure, &device_info, &ssize))
             device_list.append(device_info)
-        return device_list            
+        return device_list
+
+    def update_device_list(self):
+        """
+        update device list
+
+        Call this method to update the list of available devices, if
+        devices have been connected after creating the DeviceManager
+        instance.
+
+        """
+        dmr_errcheck(DMR_UpdateDeviceList(0, 0))
 
     cdef object get_device_by_serial(self, bytes name, int nr = 0):
         cdef HDEV hdev

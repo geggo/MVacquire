@@ -14,7 +14,7 @@ see :doc:`tutorial`. This wrapper does *not* follow the original C++ interface.
 Requirements
 ------------
 
-* Python (tested with 2.6 and 2.7, should work with 2.5 - 3.2, 32 or 64bit)
+* Python (tested with 2.6 and 2.7, should work with 2.5 - 3.4, 32 or 64bit)
 * installed ``mvIMPACT Acquire`` library (gets installed together with device drivers)
 * cython 15.1+ (git version) for installation from source (requires C
   compiler, e.g. Visual Studio 2008, or Windows Platform SDK 3.5)
