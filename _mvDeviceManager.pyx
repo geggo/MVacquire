@@ -112,6 +112,7 @@ cdef class DeviceManager:
     def __getattr__(self, bytes serial):
         return self.get_device(serial)
 
+
 #need to implement:
 #-----------------
 #class image request control -> List component
@@ -270,6 +271,20 @@ cdef class Device:
             img = result.get_buffer()
             del result
             return img
+
+    def start_acquisition(self):
+        """
+        Start the acquisition engine.
+
+        This will only have an effect if the device property
+        'acquisitionStartStopBehaviour' is set to 'User'
+        (before opening the device).
+        """
+        dmr_errcheck(DMR_AcquisitionStart(self.drv))
+
+    def stop_acquisition(self):
+        dmr_errcheck(DMR_AcquisitionStop(self.drv))
+
 
 cdef class ImageResult:
     """Image acquisition result.
