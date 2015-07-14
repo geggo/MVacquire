@@ -798,7 +798,42 @@ cdef class PropertyInt64(Property):
     cpdef set(self, int64_type value, int index = 0):
         obj_errcheck(OBJ_SetI64(self.obj, value, index))
 
+    cdef object string_to_value(self, bytes s):
+        #TODO: if flags ans cfAllowValueCombinations: split s into bytes, return ored
+        return self.get_dict()[s]
 
+    def get_dict(self):
+        #TODO: do caching (with counter_attribute_changed checking for changes)
+        cdef unsigned int size = 0
+        obj_errcheck(OBJ_GetDictSize(self.obj, &size))
+        
+        cdef unsigned int i, bufsize = 128
+        cdef int64_type* tvals = <int64_type*>malloc(size * sizeof(int64_type))
+        cdef char** buf = <char**>malloc(size * sizeof(char*))
+        
+        for i in range(size):
+            buf[i] = <char*>malloc(bufsize * sizeof(char))
+            
+        cdef int err = OBJ_GetI64DictEntries(self.obj,
+                                     buf,
+                                     bufsize,
+                                     tvals,
+                                     size)
+        #TODO: see doc: resize buffer if too small
+        d = dict()
+        if err == PROPHANDLING_NO_ERROR:
+            for i in range(size):
+                d[buf[i]] = tvals[i]
+
+        for i in range(size):
+            free(buf[i])
+        free(buf)
+        free(tvals)
+        
+        return d
+
+
+        
 cdef class PropertyFloat(Property):
     cpdef double get(self, int index = 0):
         cdef double value
