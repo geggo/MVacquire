@@ -59,7 +59,19 @@ Some notes for building with the Windows platform SDK on XP:
       python setup.py build_ext -i
    
  
+Building with Microsoft Visual C++ Compiler Package for Python 2.7
 
+0. Install MS Compiler for Python 2.7
+1. from Windows/Start Menu open "Microsoft Visual C++ Compiler Package for Python 2.7/Visual C++ 2008 32-bit Command Prompt"
+2. after navigating to MVacquire folder in prompt:
+
+    set MSSDK=1
+    set DISTUTILS_USE_SDK=1
+    python setup.py build
+    python setup.py install
+    #python setup.py bdist_wininst
+
+      
 
 License
 -------
