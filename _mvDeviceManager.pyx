@@ -82,6 +82,11 @@ cdef class DeviceManager:
         dmr_errcheck(DMR_GetDevice(&hdev, dmdsmSerial, name, nr, '*'))
         return Device(hdev)
 
+    cpdef object get_device_by_id(self, int device_id, int nr = 0):
+        cdef HDEV hdev
+        dmr_errcheck(DMR_GetDevice(&hdev, dmdsmUseDevID, '*', nr, '*'))
+        return Device(hdev)
+
     def get_device(self, bytes serial, int nr = 0):
         """
         get device by serial name
