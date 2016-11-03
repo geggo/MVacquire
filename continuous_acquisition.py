@@ -1,11 +1,18 @@
-import mv
+from __future__ import print_function
+
+import time
+from threading import Thread
+from Queue import Queue, Empty, Full
+
 import numpy as np
-from queue import Queue
+import mv
+
 
 """
 Demo program for contiuous image acquisition.
 
-Uses own thread for image acquisition, acquired images made available to main thread via a queue.
+Uses own thread for image acquisition, acquired images made available
+to main thread via a queue.
 """
 
 class AcquisitionThread(Thread):
@@ -17,21 +24,23 @@ class AcquisitionThread(Thread):
         self.wants_abort = False
 
     def acquire_image(self):
-        image_result = None
-        try:
-            image_result = self.dev.get_image()
-        except mv.MVTimeoutError:
-            print "timeout"
-        except Exception,e:
-            print "camera error: ",e
-        
         #try to submit 2 new requests -> queue always full
         try:
             self.dev.image_request()
             self.dev.image_request()
         except mv.MVError as e:
             pass
-            
+
+        #get image
+        image_result = None
+        try:
+            image_result = self.dev.get_image()
+        except mv.MVTimeoutError:
+            print("timeout")
+        except Exception,e:
+            print("camera error: ",e)
+        
+        #pack image data together with metadata in a dict
         if image_result is not None:
             buf = image_result.get_buffer()
             imgdata = np.array(buf, copy = False)
@@ -51,33 +60,39 @@ class AcquisitionThread(Thread):
         while not self.wants_abort:
             img = self.acquire_image()
             if img is not None:
-                self.queue.put_nowait(img)
+                try:
+                    self.queue.put_nowait(img)
+                    #print('.',) #
+                except Full:
+                    #print('!',)
+                    pass
 
         self.reset()
-        print "acquisition thread finished"
+        print("acquisition thread finished")
 
     def stop(self):
         self.wants_abort = True
 
-
-
-def list_cameras():
-    r = mv.List(0)
-    return r.Devices.children
-
-serial = list_cameras()[0].serial
+#find an open device
+serials = mv.List(0).Devices.children #hack to get list of available device names
+serial = serials[0]
 device = mv.dmg.get_device(serial)
+print('Using device:', serial)
 
 queue = Queue(10)
-
 acquisition_thread = AcquisitionThread(device, queue)
+
+#consume images in main thread
 acquisition_thread.start()
+#time.sleep(0.1)
+for i in range(20):
+    try:
+        img = queue.get(block=True, timeout = 1)
+        print("consumed image #", img['N'])
+    except Empty:
+        print("got no image")
 
-for i in range(4):
-    img = queue.get(block=True, timeout = 1)
-    print "got image #", img['N']
-
-time.sleep(10)
+#wait until acquisition thread has stopped
 acquisition_thread.stop()
 acquisition_thread.join()
 
