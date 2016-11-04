@@ -1,10 +1,22 @@
 # -*- coding: latin-1 -*-
+# cython: c_string_type=str, c_string_encoding=utf-8
+
+from __future__ import print_function
 from _mvDeviceManager cimport *
 from libc.stdlib cimport malloc, free
 from cpython.ref cimport Py_INCREF, Py_DECREF
 from cython.view cimport array as cvarray
 import weakref
 from libc.string cimport memcpy
+
+cdef to_bytes(s):
+    cdef bytes b
+    if isinstance(s, unicode):
+        b = (<unicode>s).encode('utf-8')
+    else:
+        b = s
+    return b
+
 
 cpdef int visibility_level = cvGuru #TODO: allow changing this variable
 
@@ -63,6 +75,7 @@ cdef class DeviceManager:
         for i in range(self.device_count):
             dmr_errcheck(DMR_GetDevice(&hdev, dmdsmSerial, '*', i, '*'))
             dmr_errcheck(DMR_GetDeviceInfoEx(hdev, dmditDeviceInfoStructure, &device_info, &ssize))
+            #print('device info', <bytes>device_info.serial, device_info.deviceId)
             device_list.append(device_info)
         return device_list
 
@@ -87,14 +100,14 @@ cdef class DeviceManager:
         dmr_errcheck(DMR_GetDevice(&hdev, dmdsmUseDevID, '*', nr, '*'))
         return Device(hdev)
 
-    def get_device(self, bytes serial, int nr = 0):
+    def get_device(self, serial, int nr = 0):
         """
         get device by serial name
         
         Parameters
         ----------
 
-        serial : bytes
+        serial : string like
             device serial name
 
         Returns
@@ -107,14 +120,14 @@ cdef class DeviceManager:
         #FIXME: create unique handle
         device = self.devices.get(serial)
         if device is None:
-            device = self.get_device_by_serial(serial)
+            device = self.get_device_by_serial(to_bytes(serial))
             self.devices[serial] = device
         return device
         
     def __dir__(self):
         return [dev['serial'] for dev in self.get_device_list()]
 
-    def __getattr__(self, bytes serial):
+    def __getattr__(self, serial):
         return self.get_device(serial)
 
 
@@ -163,13 +176,13 @@ cdef class Device:
     def __cinit__(self, HDEV dev):
         self.dev = dev
         dmr_errcheck(DMR_OpenDevice(self.dev, &self.drv))
-        print "open device", hex(self.dev), hex(self.drv)
+        print("open device", hex(self.dev), hex(self.drv))
             
     def __dealloc__(self):
-        print "close device", hex(self.dev), hex(self.drv)
+        print("close device", hex(self.dev), hex(self.drv))
         DMR_CloseDevice(self.drv, self.dev)
 
-    cdef List get_list(self, bytes name, flags = 0):
+    cdef List get_list(self, name, flags = 0):
         cdef HLIST hlist
         list_type = lists[name]
         dmr_errcheck(DMR_FindList(self.drv,
@@ -182,7 +195,7 @@ cdef class Device:
     def __dir__(self):
         return lists.keys()
     
-    def __getattr__(self, bytes name):
+    def __getattr__(self, name):
         return self.get_list(name)
 
     #def create_request_control(self, bytes name, bytes parent = <bytes>'Base'):
@@ -271,7 +284,7 @@ cdef class Device:
         try:
             result = self.get_image()
         except Exception as e:
-            print "error getting image (ignored):", e
+            print("error getting image (ignored):", e)
         else:
             img = result.get_buffer()
             del result
@@ -480,7 +493,7 @@ cdef char* StringConstructionFunction(const char* buf, size_t size):
     #print "String Constructor:", buf, size
     cdef object res = buf[:size-1]
     Py_INCREF(res) #make res survive
-    return <char*><void*> res
+    return <char*><void*> res #hide res (Python object) as a char*
 
 cdef class Component:
     """Entry in property tree, base class for List, Property, and Method objects"""
@@ -494,7 +507,7 @@ cdef class Component:
             cdef int err = OBJ_CheckHandle(self.obj, hcmFull)
             return (err == PROPHANDLING_NO_ERROR)
 
-    cdef bytes get_string(self, TOBJ_StringQuery sq, int index = 0):
+    cdef object get_string(self, TOBJ_StringQuery sq, int index = 0):
         cdef char* res
         obj_errcheck(OBJ_GetSWithInplaceConstruction(
             self.obj,
@@ -502,7 +515,7 @@ cdef class Component:
             &res,
             StringConstructionFunction,
             0, index))
-        cdef object result = <object><void*>res
+        cdef object result = <object><void*>res #forced cast back to Python object 
         Py_DECREF(result) #compensate for INCREF in StringConstructionFunction
         return result
 
@@ -568,9 +581,9 @@ cdef class List(Component):
 
     """List of Components"""
 
-    def __getitem__(self, bytes key):
+    def __getitem__(self, key):
         cdef HOBJ obj = 0
-        cdef int err = OBJ_GetHandleEx(self.obj, key, &obj, 0, 1) #only search in this list
+        cdef int err = OBJ_GetHandleEx(self.obj, to_bytes(key), &obj, 0, 1) #only search in this list
         if err == PROPHANDLING_NO_ERROR:
             return create_component(obj)
         else:
@@ -579,16 +592,14 @@ cdef class List(Component):
     def __dir__(self):
         return [c.name for c in self if c.isvisible]
 
-    def __getattr__(self, bytes name):
+    def __getattr__(self, name):
         try:
             return self[name]
         except Exception, e: #FIXME
             raise AttributeError, e
 
-    def __setattr__(self, bytes name, value):
+    def __setattr__(self, name, value):
         self[name].value = value
-        
-        
 
     property children:
         def __get__(self):
@@ -708,7 +719,7 @@ cdef class Property(Component):
         raise MVError("conversion from string not implemented for %s"%type(self))
 
     def writeS(self, bytes value, int index=0):
-        obj_errcheck(OBJ_SetS(self.obj, <char*>value, index))
+        obj_errcheck(OBJ_SetS(self.obj, value, index))
 
     def getS(self, int index=0):
         cdef size_t bufsize

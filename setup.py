@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os, os.path, platform
 from distutils.core import setup
 from distutils.extension import Extension
@@ -6,7 +7,7 @@ from Cython.Distutils import build_ext
 
 mvbase = os.path.normpath(os.getenv('MVIMPACT_ACQUIRE_DIR', 'matrix-vision'))
 if mvbase is None:
-    print "Warning! mvIMPACT Acquire base directory location unknown"
+    print("Warning! mvIMPACT Acquire base directory location unknown")
     mvbase = 'matrix-vision'
 
 mvinclude = mvbase

@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import time
 from threading import Thread
-from Queue import Queue, Empty, Full
+from six.moves.queue import Queue, Empty, Full
 
 import numpy as np
 import mv
@@ -37,7 +37,7 @@ class AcquisitionThread(Thread):
             image_result = self.dev.get_image()
         except mv.MVTimeoutError:
             print("timeout")
-        except Exception,e:
+        except Exception as e:
             print("camera error: ",e)
         
         #pack image data together with metadata in a dict
