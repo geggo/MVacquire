@@ -12,9 +12,12 @@ if mvbase is None:
 
 mvinclude = mvbase
 mvlib = os.path.join(mvbase, 'lib')
+system = platform.system()
 bits,foo = platform.architecture()
-if bits == '64bit':
+if system == 'Windows' and bits == '64bit':
     mvlib = os.path.join(mvlib, r'win\x64')
+elif system == 'Linux' and bits == '64bit':
+    mvlib = os.path.join(mvlib, 'x86_64')
 
 ext_modules = [Extension("mv",
                         ["_mvDeviceManager.pyx"],
