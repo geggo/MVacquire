@@ -70,12 +70,11 @@ cdef class DeviceManager:
         device_list = []
         cdef TDMR_DeviceInfo device_info
         cdef int i
-        cdef size_t ssize = 0
+        cdef size_t ssize = sizeof(device_info)
         cdef HDEV hdev
         for i in range(self.device_count):
             dmr_errcheck(DMR_GetDevice(&hdev, dmdsmSerial, '*', i, '*'))
             dmr_errcheck(DMR_GetDeviceInfoEx(hdev, dmditDeviceInfoStructure, &device_info, &ssize))
-            #print('device info', <bytes>device_info.serial, device_info.deviceId)
             device_list.append(device_info)
         return device_list
 
