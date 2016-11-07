@@ -714,7 +714,7 @@ cdef class Property(Component):
                 except TypeError:
                     self.set(self.string_to_value(val), i)
                 
-    cdef object string_to_value(self, bytes s):
+    cdef object string_to_value(self, s):
         raise MVError("conversion from string not implemented for %s"%type(self))
 
     def writeS(self, bytes value, int index=0):
@@ -766,7 +766,7 @@ cdef class PropertyInt(Property):
     cpdef set(self, int value, int index = 0):
         obj_errcheck(OBJ_SetI(self.obj, value, index))
 
-    cdef object string_to_value(self, bytes s):
+    cdef object string_to_value(self, s):
         #TODO: if flags ans cfAllowValueCombinations: split s into bytes, return ored
         return self.get_dict()[s]
         
@@ -813,7 +813,7 @@ cdef class PropertyInt64(Property):
     cpdef set(self, int64_type value, int index = 0):
         obj_errcheck(OBJ_SetI64(self.obj, value, index))
 
-    cdef object string_to_value(self, bytes s):
+    cdef object string_to_value(self, s):
         #TODO: if flags ans cfAllowValueCombinations: split s into bytes, return ored
         return self.get_dict()[s]
 
@@ -858,7 +858,7 @@ cdef class PropertyFloat(Property):
     cpdef set(self, double value, int index = 0):
         obj_errcheck(OBJ_SetF(self.obj, value, index))
 
-    cdef object string_to_value(self, bytes s):
+    cdef object string_to_value(self, s):
         return float(s)
     #FIXME: sscanf with format????
     
