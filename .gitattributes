@@ -1,0 +1,4 @@
+generate/DriverBase/Include/* linguist-vendored
+generate/mvDeviceManager/Include linguist-vendored
+generate/mvPropHandling/Include linguist-vendored
+generate/mvIMPACT_acquire.h linguist-vendored
