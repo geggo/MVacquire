@@ -1,3 +1,4 @@
+from __future__ import print_function
 import mv
 import numpy as  np
 #import pylab as plt
@@ -53,16 +54,16 @@ for pixfmt in pixel_formats:
     result = cam.get_image(timeout = 1.0)
     #print "result:"
     #print result.result, result.state, result.info
-    print pixfmt
+    print(pixfmt)
     try:
         buf = result.get_buffer()
-        print "buffer:", buf.shape
+        print("buffer:", buf.shape)
         img = np.asarray(buf)
-        print img.shape, img.dtype
-        print img[...,0, :6]
+        print(img.shape, img.dtype)
+        print(img[...,0, :6])
     except mv.MVError as e:
-        print "Error getting buffer:", e
-    print
+        print("Error getting buffer:", e)
+    print()
 
 #
 #plt.imshow(np.squeeze(img))
