@@ -198,7 +198,7 @@ cdef class Device:
         return self.get_list(name)
 
     #def create_request_control(self, bytes name, bytes parent = <bytes>'Base'):
-    def create_request_control(self, bytes name, parent = 'Base'):
+    def create_request_control(self, bytes name, parent = b'Base'):
         """
         create a new request control object.
         
@@ -639,7 +639,7 @@ cdef class Method(Component):
         def __get__(self):
             return self.get_string(sqMethParamString)
 
-    def __call__(self, *args, delim = '|'):
+    def __call__(self, *args, delim = b'|'):
         cdef int result
         signature = self.signature
         assert len(delim) == 1
@@ -725,7 +725,7 @@ cdef class Property(Component):
         obj_errcheck(OBJ_GetSFormattedEx(self.obj, NULL, &bufsize, NULL, index))
         cdef char* buf = <char*>malloc(bufsize)
         cdef TPROPHANDLING_ERROR err = OBJ_GetSFormattedEx(self.obj, buf, &bufsize, NULL, index)
-        cdef bytes s = buf[:bufsize-1]
+        cdef s = buf[:bufsize-1]
         free(buf)
         obj_errcheck(err)
         return s
@@ -872,7 +872,7 @@ cdef class PropertyPtr(Property):
         obj_errcheck(OBJ_SetP(self.obj, <void *>value, index))
 
 cdef class PropertyString(Property):
-    cpdef bytes get(self, int index = 0):
+    cpdef get(self, int index = 0):
         return self.get_string(sqPropVal, index)
 
     cpdef set(self, bytes value, int index = 0):
