@@ -1,7 +1,12 @@
 from __future__ import print_function
 import os, os.path, platform
-from distutils.core import setup
-from distutils.extension import Extension
+
+from setuptools import setup, Extension
+#from distutils.util import convert_path
+#from Cython.Build import cythonize
+
+#from distutils.core import setup
+#from distutils.extension import Extension
 from Cython.Distutils import build_ext
 #import numpy as np
 
