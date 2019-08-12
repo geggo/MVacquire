@@ -18,11 +18,17 @@ if mvbase is None:
 mvinclude = mvbase
 mvlib = os.path.join(mvbase, 'lib')
 system = platform.system()
-bits,foo = platform.architecture()
+bits, _ = platform.architecture()
+machine = platform.machine()
+
 if system == 'Windows' and bits == '64bit':
     mvlib = os.path.join(mvlib, r'win\x64')
-elif system == 'Linux' and bits == '64bit':
+elif system == 'Linux' and bits == '64bit' and machine == 'aarch64':
+    mvlib = os.path.join(mvlib, 'arm64')
+elif system == 'Linux' and bits == '64bit' and machine == 'x86_64':
     mvlib = os.path.join(mvlib, 'x86_64')
+else:
+    print('system is not yet supported (sys info: {} {} {})'.format(system, bits, machine))
 
 ext_modules = [Extension("mv",
                         ["_mvDeviceManager.pyx"],
