@@ -25,6 +25,8 @@ if system == 'Windows' and bits == '64bit':
     mvlib = os.path.join(mvlib, r'win\x64')
 elif system == 'Linux' and bits == '64bit' and machine == 'aarch64':
     mvlib = os.path.join(mvlib, 'arm64')
+elif system == 'Linux' and bits == '32bit' and machine == 'armv7l':
+    mvlib = os.path.join(mvlib, 'arm')
 elif system == 'Linux' and bits == '64bit' and machine == 'x86_64':
     mvlib = os.path.join(mvlib, 'x86_64')
 else:
