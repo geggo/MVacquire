@@ -448,8 +448,8 @@ cdef dict lists = {
     'Real_time_control': dmltRTCtr,
     'Camera_descriptions': dmltCameraDescriptions,
     'Device_specific_data': dmltDeviceSpecificData,
-    'Event_sub_system': dmltEventSubSystemSettings,
-    'Event_sub_system_results': dmltEventSubSystemResults,
+   # 'Event_sub_system': dmltEventSubSystemSettings,
+   # 'Event_sub_system_results': dmltEventSubSystemResults,
     'Image_memory_manager': dmltImageMemoryManager,
     }
        

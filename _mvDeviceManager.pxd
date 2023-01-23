@@ -125,8 +125,8 @@ cdef extern from "mvDeviceManager/Include/mvDeviceManager.h":
         dmltRTCtr
         dmltCameraDescriptions
         dmltDeviceSpecificData
-        dmltEventSubSystemSettings
-        dmltEventSubSystemResults
+        #dmltEventSubSystemSettings
+        #dmltEventSubSystemResults
         dmltImageMemoryManager
 
     ctypedef TOBJ_HandleCheckMode TOBJ_HandleCheckMode
